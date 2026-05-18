@@ -1,0 +1,9 @@
+{
+  "request_type": "callback",
+  "customer_name": "Aisha Bello",
+  "phone_number": "08123450000",
+  "fulfillment_type": "not_applicable",
+  "callback_reason": "Customer asked about a custom corporate lunch package not listed in the knowledge base.",
+  "source": "voice_agent",
+  "call_id": "demo-callback-001"
+}
