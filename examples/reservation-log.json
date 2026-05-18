@@ -1,0 +1,12 @@
+{
+  "request_type": "reservation",
+  "customer_name": "Chinedu Nwosu",
+  "phone_number": "08087654321",
+  "fulfillment_type": "not_applicable",
+  "reservation_date": "2026-06-01",
+  "reservation_time": "18:30:00",
+  "guest_count": 6,
+  "notes": "Birthday dinner. Customer was informed about the ₦5,000 deposit.",
+  "source": "voice_agent",
+  "call_id": "demo-reservation-001"
+}
