@@ -1,0 +1,13 @@
+{
+  "request_type": "order",
+  "customer_name": "Ada Okafor",
+  "phone_number": "08012345678",
+  "order_details": "1 large Jollof Rice, 1 chicken, 1 Malt. Extra pepper.",
+  "order_total": 4000,
+  "fulfillment_type": "delivery",
+  "delivery_address": "22 Aminu Kano Crescent, Wuse 2, Abuja",
+  "delivery_area": "Wuse 2",
+  "notes": "Customer requested extra pepper.",
+  "source": "voice_agent",
+  "call_id": "demo-order-001"
+}
