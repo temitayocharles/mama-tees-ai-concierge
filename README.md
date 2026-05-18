@@ -1,8 +1,40 @@
 # Mama Tee's Kitchen AI Voice Concierge
 
-Production-ready capstone implementation package for **AI-Powered Business Concierge for Mama Tee's Kitchen**.
+Capstone implementation package for **AI-Powered Business Concierge for Mama Tee's Kitchen**.
 
-This repository provides a deployable webhook backend, restaurant knowledge base, voice-agent prompts, Google Sheets logging integration, validation rules, demo test cases, and submission assets.
+This repository provides a deployable webhook backend, restaurant knowledge base, voice-agent prompts, Google Sheets logging integration, validation rules, demo test cases, n8n fallback workflow, and submission documentation.
+
+## Source of truth
+
+Start here before changing anything:
+
+```text
+docs/CAPSTONE_BRIEF_REQUIREMENTS.md
+PROJECT_HANDOFF.md
+```
+
+`docs/CAPSTONE_BRIEF_REQUIREMENTS.md` extracts the project requirements from the uploaded capstone brief and maps them to repository files, acceptance tests, and submission evidence.
+
+## Selected implementation direction
+
+Primary stack:
+
+```text
+Retell AI phone agent
+→ ElevenLabs custom voice
+→ Node.js backend webhook
+→ Google Sheets visible log
+```
+
+Optional fallback or extension:
+
+```text
+Voice platform
+→ n8n webhook
+→ Google Sheets visible log
+```
+
+Vapi is not required by the capstone brief. It remains a valid alternative, but this repository is now oriented around Retell plus ElevenLabs to create a differentiated submission without weakening the project.
 
 ## What this project does
 
@@ -19,9 +51,9 @@ The system supports a restaurant voice assistant that can:
 
 ```text
 Customer phone call
-  -> Voice agent platform, such as Vapi, Retell, Bland, or Twilio voice workflow
-  -> Voice agent uses prompts/voice-agent-system-prompt.md
-  -> Voice agent calls POST /api/call-logs when a request must be logged
+  -> Retell AI phone agent using ElevenLabs custom voice
+  -> Agent uses prompts/voice-agent-system-prompt.md
+  -> Agent calls POST /api/call-logs after confirmed order/reservation/callback
   -> Backend validates payload and business rules
   -> Backend appends row to Google Sheet
   -> Owner reviews visible call log
@@ -32,18 +64,9 @@ Customer phone call
 ```text
 .
 ├── .github/workflows/ci.yml
-├── data/
-│   ├── google-sheet-template.csv
-│   └── knowledge-base.json
 ├── docs/
-│   ├── DEPLOYMENT.md
-│   ├── EXECUTION_STATUS.md
-│   ├── GITHUB_REPOSITORY_SETUP.md
-│   ├── GOOGLE_SHEETS_SETUP.md
-│   ├── IMPLEMENTATION_GUIDE.md
-│   ├── LOOM_DEMO_SCRIPT.md
-│   ├── N8N_WORKFLOW_SETUP.md
-│   ├── SUBMISSION_CHECKLIST.md
+│   ├── CAPSTONE_BRIEF_REQUIREMENTS.md
+│   ├── REPLIT_INTERFACE_CAVEATS.md
 │   └── VOICE_AGENT_PLATFORM_SETUP.md
 ├── examples/
 │   ├── callback-log.json
@@ -55,8 +78,6 @@ Customer phone call
 │   ├── voice-agent-system-prompt.md
 │   └── voice-agent-tool-schema.md
 ├── scripts/
-│   ├── create-github-repo.sh
-│   ├── push-to-existing-github-repo.sh
 │   ├── render-env-summary.sh
 │   ├── seed-google-sheet.ts
 │   └── test-api.sh
@@ -77,8 +98,7 @@ Customer phone call
     └── businessRules.test.ts
 ```
 
-
-## Live setup completed in this handoff
+## Live setup completed
 
 A Google Sheet has already been created and seeded for the capstone demo.
 
@@ -89,9 +109,11 @@ Tab: Call Logs
 URL: https://docs.google.com/spreadsheets/d/1TYO9pj59qYfBeExiKLVYuvD9QB1jSFAhFb5rGBv4mB8/edit
 ```
 
-The repository also includes an importable n8n workflow at `n8n/mama-tees-call-logger.workflow.json`. Use `docs/N8N_WORKFLOW_SETUP.md` for import and credential mapping.
+The repository also includes an importable n8n workflow at:
 
-To create and push the GitHub repository from this package, use `docs/GITHUB_REPOSITORY_SETUP.md`.
+```text
+n8n/mama-tees-call-logger.workflow.json
+```
 
 ## Quick start
 
@@ -113,7 +135,7 @@ For a fast local demo, leave:
 LOG_DESTINATION=local_jsonl
 ```
 
-For final submission with Google Sheets logging, configure Google Sheets credentials using `docs/GOOGLE_SHEETS_SETUP.md`.
+For final submission with Google Sheets logging, configure the Google service account values in `.env` or your deployment host secret manager.
 
 ### 3. Run locally
 
@@ -142,7 +164,7 @@ Expected result:
 ### 5. Test API logging
 
 ```bash
-./scripts/test-api.sh
+WEBHOOK_SECRET=replace-with-a-long-random-secret ./scripts/test-api.sh
 ```
 
 Expected result:
@@ -159,30 +181,17 @@ If `LOG_DESTINATION=local_jsonl`, records are appended to:
 storage/call-logs.jsonl
 ```
 
-## Validation status
-
-The updated package was validated after execution updates.
-
-```text
-npm ci: completed
-TypeScript build: passed
-Test files: 2 passed
-Tests: 8 passed
-Production dependency audit: 0 vulnerabilities
-Google Sheet A1:V4 verification: passed
-```
-
 ## Deployment options
 
 Recommended capstone deployment path:
 
-1. Deploy backend to Render, Railway, Fly.io, or any Node.js host.
+1. Deploy backend to Render, Railway, Fly.io, or another Node.js host.
 2. Configure environment variables.
-3. Create and share Google Sheet with service account.
-4. Configure voice agent webhook tool to call `POST /api/call-logs`.
-5. Record Loom demo with live call and visible log update.
-
-See `docs/DEPLOYMENT.md` for exact steps.
+3. Share the Google Sheet with the Google service account.
+4. Configure Retell AI agent tool/webhook to call `POST /api/call-logs`.
+5. Configure ElevenLabs custom voice in the selected voice platform.
+6. Test order, reservation, invalid reservation, Sunday delivery, and callback flows.
+7. Record Loom demo with live call and visible Google Sheet update.
 
 ## Security notes
 
@@ -190,7 +199,7 @@ See `docs/DEPLOYMENT.md` for exact steps.
 - Use `WEBHOOK_SECRET` and require the voice platform to send it in the `X-Webhook-Secret` header.
 - Share the Google Sheet only with the service account email and required human reviewers.
 - Restrict service account permissions to the target spreadsheet.
-- Rotate secrets after demo if they were displayed during screen recording.
+- Rotate secrets after the demo if they were displayed during screen recording.
 
 ## Required submission assets
 
@@ -200,4 +209,4 @@ The capstone requires:
 - Screenshots of the build.
 - Both must be submitted together.
 
-Use `docs/LOOM_DEMO_SCRIPT.md` and `docs/SUBMISSION_CHECKLIST.md`.
+Use `docs/CAPSTONE_BRIEF_REQUIREMENTS.md` for the acceptance test matrix and `PROJECT_HANDOFF.md` for current project state.
