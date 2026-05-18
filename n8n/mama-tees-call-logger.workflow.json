@@ -1,0 +1,155 @@
+{
+  "name": "Mama Tee AI Concierge Call Logger",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "mama-tees-call-logger",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Receive Voice Agent Log",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$headers['x-webhook-secret']}}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "validate-secret-present",
+      "name": "Validate Secret Present",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [260, 0]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": "1TYO9pj59qYfBeExiKLVYuvD9QB1jSFAhFb5rGBv4mB8",
+        "sheetName": "Call Logs",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{$json.body.id || $execution.id}}",
+            "timestamp": "={{new Date().toISOString()}}",
+            "request_type": "={{$json.body.request_type}}",
+            "customer_name": "={{$json.body.customer_name}}",
+            "phone_number": "={{$json.body.phone_number}}",
+            "order_details": "={{$json.body.order_details || ''}}",
+            "order_total": "={{$json.body.order_total || ''}}",
+            "fulfillment_type": "={{$json.body.fulfillment_type || 'not_applicable'}}",
+            "delivery_address": "={{$json.body.delivery_address || ''}}",
+            "delivery_area": "={{$json.body.delivery_area || ''}}",
+            "delivery_fee": "={{$json.body.delivery_fee || ''}}",
+            "reservation_date": "={{$json.body.reservation_date || ''}}",
+            "reservation_time": "={{$json.body.reservation_time || ''}}",
+            "guest_count": "={{$json.body.guest_count || ''}}",
+            "callback_reason": "={{$json.body.callback_reason || ''}}",
+            "notes": "={{$json.body.notes || ''}}",
+            "confirmation_summary": "={{$json.body.confirmation_summary || ''}}",
+            "status": "={{$json.body.status || 'new'}}",
+            "source": "={{$json.body.source || 'n8n'}}",
+            "call_id": "={{$json.body.call_id || ''}}",
+            "validation_warnings": "={{$json.body.validation_warnings || ''}}",
+            "raw_transcript": "={{$json.body.raw_transcript || ''}}"
+          }
+        },
+        "options": {}
+      },
+      "id": "append-google-sheet-row",
+      "name": "Append Google Sheet Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [540, -80],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_IN_N8N",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"status\":\"logged\",\"id\":\"{{$execution.id}}\"}",
+        "options": {
+          "responseCode": 201
+        }
+      },
+      "id": "success-response",
+      "name": "Return Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [800, -80]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"error\":\"Unauthorized\"}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "unauthorized-response",
+      "name": "Return Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [540, 160]
+    }
+  ],
+  "connections": {
+    "Receive Voice Agent Log": {
+      "main": [
+        [
+          {
+            "node": "Validate Secret Present",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Secret Present": {
+      "main": [
+        [
+          {
+            "node": "Append Google Sheet Row",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Unauthorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append Google Sheet Row": {
+      "main": [
+        [
+          {
+            "node": "Return Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1"
+}
