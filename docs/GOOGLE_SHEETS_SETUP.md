@@ -85,13 +85,17 @@ Keep `GOOGLE_PRIVATE_KEY` in the deployment secret manager. Do not commit it, pa
 
 ## Private key formatting
 
-Most deployment platforms expect the key as one line with escaped newlines:
+Copy only the `private_key` value from the service-account JSON. Do not paste the entire JSON file into `GOOGLE_PRIVATE_KEY`.
+
+Vercel can store either actual newlines or escaped newlines. The backend normalizes both of these forms:
 
 ```text
 -----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n
 ```
 
-The backend normalizes escaped newlines before authenticating.
+```text
+"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+```
 
 ## Runtime readiness behavior
 
@@ -99,7 +103,7 @@ The backend normalizes escaped newlines before authenticating.
 
 `/readiness` returns `503 not_ready` if `LOG_DESTINATION=google_sheets` is enabled but required Google Sheets credentials are missing. This prevents a partially configured public deployment from being treated as ready.
 
-## Validation command
+## Authenticated write validation
 
 After deployment, send a callback payload with the real webhook secret set only in your shell environment:
 
@@ -120,13 +124,26 @@ Expected response:
 
 Then confirm a new row appears in the Google Sheet.
 
+## Sanitized Google Sheets error codes
+
+Authenticated writes return sanitized diagnostic codes when Google Sheets append fails. These codes intentionally do not expose secrets.
+
+| Code | Meaning | Fix |
+|---|---|---|
+| `GOOGLE_PRIVATE_KEY_INVALID` | Private key value is malformed or pasted incorrectly. | Copy only the JSON `private_key` value and preserve or escape newlines. |
+| `GOOGLE_AUTH_FAILED` | Google rejected the JWT credentials. | Confirm service-account email and key belong to the same service account. |
+| `GOOGLE_SHEETS_PERMISSION_DENIED` | Service account cannot edit the Sheet or Sheets API access is denied. | Share the Sheet with the service account email as Editor and confirm Sheets API is enabled. |
+| `GOOGLE_SHEETS_TARGET_NOT_FOUND` | Spreadsheet ID or tab is wrong, or inaccessible. | Confirm spreadsheet ID and `Call Logs` tab. |
+| `GOOGLE_SHEETS_REQUEST_INVALID` | Google Sheets rejected the append range or request. | Confirm the tab name and sheet schema. |
+| `GOOGLE_SHEETS_APPEND_FAILED` | Generic upstream append failure. | Check Vercel runtime logs and Google Cloud API status. |
+
 ## Troubleshooting
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | `/readiness` returns `503 not_ready` | Missing webhook or Google Sheets env var | Check Vercel env keys without exposing values. |
-| 500 from backend on valid write | Google credential or Sheets API problem | Check service account email, API enablement, and private key formatting. |
-| 500 with auth error | Private key formatting issue | Use escaped newlines in `GOOGLE_PRIVATE_KEY`. |
+| 502 with `GOOGLE_PRIVATE_KEY_INVALID` | Private key formatting issue | Use the JSON `private_key` value, not the full JSON file. |
+| 502 with `GOOGLE_SHEETS_PERMISSION_DENIED` | Service account not shared or API disabled | Share Sheet with service account as Editor and enable Sheets API. |
+| 502 with `GOOGLE_AUTH_FAILED` | Email/key mismatch or invalid service account key | Regenerate the service account key and update both env vars. |
 | No new row | Wrong spreadsheet ID or tab name | Confirm ID and `Call Logs` tab. |
-| Permission denied | Service account not shared | Share Sheet with service account as Editor. |
 | Values in wrong columns | Header mismatch | Compare Sheet header with `SHEET_COLUMNS`. |
