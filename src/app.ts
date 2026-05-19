@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import { helmet } from 'helmet';
+import helmet from 'helmet';
 import { config } from './config.js';
 import { healthRouter } from './routes/health.js';
 import { createCallLogsRouter } from './routes/callLogs.js';
