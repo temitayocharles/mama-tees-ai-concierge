@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { config, isGoogleSheetsConfigured, isWebhookSecretConfigured } from '../config.js';
+import { config, getGoogleSheetsAuthMode, isGoogleSheetsConfigured, isWebhookSecretConfigured } from '../config.js';
 
 export const healthRouter = Router();
 
@@ -12,6 +12,7 @@ healthRouter.get('/readiness', (_req, res) => {
     webhook_auth_configured: isWebhookSecretConfigured(),
     log_destination: config.LOG_DESTINATION,
     google_sheets_configured: isGoogleSheetsConfigured(),
+    google_sheets_auth_mode: config.LOG_DESTINATION === 'google_sheets' ? getGoogleSheetsAuthMode() : 'not_applicable',
     business_timezone: config.BUSINESS_TIMEZONE
   };
 
