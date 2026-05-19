@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Router } from 'express';
 import { config, isWebhookSecretConfigured } from '../config.js';
+import { getSanitizedErrorResponse } from '../errors.js';
 import { logger } from '../logger.js';
 import { validateDelivery, validateReservation, buildConfirmationSummary } from '../domain/businessRules.js';
 import { knowledgeBase } from '../domain/knowledgeBase.js';
@@ -77,6 +78,16 @@ export function createCallLogsRouter(logSink: LogSink): Router {
         confirmation_summary: confirmationSummary
       });
     } catch (error) {
+      const sanitizedError = getSanitizedErrorResponse(error);
+      if (sanitizedError) {
+        logger.error({ code: sanitizedError.code, upstream_status: sanitizedError.upstream_status }, 'Failed to append call log');
+        return res.status(sanitizedError.statusCode).json({
+          error: sanitizedError.error,
+          code: sanitizedError.code,
+          upstream_status: sanitizedError.upstream_status
+        });
+      }
+
       logger.error({ error }, 'Failed to append call log');
       return res.status(500).json({ error: 'Failed to append call log' });
     }
