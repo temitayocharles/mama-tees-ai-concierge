@@ -103,6 +103,59 @@ Critical behavior included:
 - Escalates unknown requests into callback logs.
 - Does not invent menu items, prices, discounts, policies, or availability.
 
+## Speech normalization and pronunciation
+
+The active Retell LLM has been updated with a speech-normalization layer for Nigerian food terms, naira amounts, times, and numeric strings.
+
+Currency guidance:
+
+```text
+N500 / ₦500 -> five hundred naira
+N800 / ₦800 -> eight hundred naira
+N1,200 / ₦1,200 -> one thousand two hundred naira
+N3,000 / ₦3,000 -> three thousand naira
+N3,500 / ₦3,500 -> three thousand five hundred naira
+N5,000 / ₦5,000 -> five thousand naira
+N7,000 / ₦7,000 -> seven thousand naira
+```
+
+Time guidance:
+
+```text
+10:00am -> 10am
+7:00pm -> 7pm
+12pm -> 12pm
+```
+
+Numeric-string guidance:
+
+```text
+Phone numbers and bank account numbers must be read digit by digit.
+0123456789 -> zero, one, two, three, four, five, six, seven, eight, nine.
+```
+
+Food and location pronunciation guidance:
+
+```text
+Agidi: A-gi-di. Tone guide: do do mi.
+Kunu: Ku-nu. Tone guide: do mi.
+Akara: A-ka-ra. Tone guide: do do do.
+Egusi: E-gu-si. Tone guide: do mi mi.
+Ogbono: Og-bo-no. Tone guide: do do do.
+Ewedu: E-we-du. Tone guide: re mi mi.
+Gbegiri: Gbe-gi-ri. Tone guide: do do do.
+Shaki: Sha-ki. Tone guide: do do.
+Ponmo: Pon-mo. Tone guide: do mi.
+Eba: E-ba. Tone guide: do do.
+Amala: A-ma-la. Tone guide: do do do.
+Adetokunbo: A-de-to-kun-bo. Tone guide: re mi do re do.
+Ademola: A-de-mo-la. Tone guide: re mi mi mi.
+Wuse: Wu-se. Tone guide: mi mi.
+Abuja: A-bu-ja. Tone guide: do mi mi.
+```
+
+The tone guides are agent/operator guidance only. The assistant must not explain tone notes to callers.
+
 ## Tool configuration
 
 Configured tool name:
@@ -162,11 +215,13 @@ Run these tests after the phone number and tool authentication are configured:
 5. Invalid reservation for 4 guests.
 6. Valid reservation for 5 or more guests.
 7. Unknown catering request converted into callback logging.
+8. Pronunciation test for naira amounts, 10am, Agidi, Egusi, Ewedu, Gbegiri, Shaki, Ponmo, Eba, Amala, Adetokunbo Ademola Crescent, Wuse, and Abuja.
 
 Expected validation:
 
 - Caller hears automated-assistant disclosure.
 - Business rules are preserved.
+- Pronunciation and numeric speech are acceptable for the demo.
 - Tool calls succeed with authenticated backend writes.
 - New rows appear in the `Call Logs` Google Sheet.
 - No secrets appear in Retell transcripts, GitHub, screenshots, or Loom evidence.
