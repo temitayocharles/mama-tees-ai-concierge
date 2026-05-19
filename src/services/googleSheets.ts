@@ -1,7 +1,8 @@
 import { google } from 'googleapis';
 import { ExternalServiceError } from '../errors.js';
-import { config, requireGoogleSheetsConfig } from '../config.js';
-import type { CallLogRecord, LogSink } from '../types.js';
+import { config, getGoogleSheetsAuthMode, requireGoogleSheetsConfig } from '../config.js';
+import type { CallLogRecord, LogContext, LogSink } from '../types.js';
+import { createWorkloadIdentitySheetsClient } from './googleWorkloadIdentity.js';
 
 export const SHEET_COLUMNS = [
   'id',
@@ -29,7 +30,7 @@ export const SHEET_COLUMNS = [
 ] as const;
 
 interface GoogleApiErrorShape {
-  code?: number;
+  code?: number | string;
   status?: number;
   message?: string;
   response?: {
@@ -71,16 +72,25 @@ function getErrorText(error: GoogleApiErrorShape): string {
     error.message,
     error.response?.data?.message,
     error.response?.data?.error,
-    error.response?.data?.error_description
+    error.response?.data?.error_description,
+    typeof error.code === 'string' ? error.code : undefined
   ]
     .filter(Boolean)
     .join(' ')
     .toLowerCase();
 }
 
+function getNumericUpstreamStatus(error: GoogleApiErrorShape): number | undefined {
+  return error.response?.status ?? error.status ?? (typeof error.code === 'number' ? error.code : undefined);
+}
+
 function classifyGoogleSheetsError(error: unknown): { code: string; upstreamStatus?: number } {
+  if (error instanceof ExternalServiceError) {
+    return { code: error.publicCode, upstreamStatus: error.upstreamStatus };
+  }
+
   const googleError = error as GoogleApiErrorShape;
-  const upstreamStatus = googleError.response?.status ?? googleError.status ?? googleError.code;
+  const upstreamStatus = getNumericUpstreamStatus(googleError);
   const text = getErrorText(googleError);
 
   if (
@@ -88,7 +98,8 @@ function classifyGoogleSheetsError(error: unknown): { code: string; upstreamStat
     text.includes('pem') ||
     text.includes('decoder') ||
     text.includes('asn') ||
-    text.includes('no start line')
+    text.includes('no start line') ||
+    text.includes('err_ossl_unsupported')
   ) {
     return { code: 'GOOGLE_PRIVATE_KEY_INVALID', upstreamStatus };
   }
@@ -112,15 +123,23 @@ function classifyGoogleSheetsError(error: unknown): { code: string; upstreamStat
   return { code: 'GOOGLE_SHEETS_APPEND_FAILED', upstreamStatus };
 }
 
-function getSheetsClient() {
-  requireGoogleSheetsConfig();
-
+function getJsonKeySheetsClient() {
   const auth = new google.auth.JWT({
     email: config.GOOGLE_SERVICE_ACCOUNT_EMAIL,
     key: normalizePrivateKey(config.GOOGLE_PRIVATE_KEY),
     scopes: ['https://www.googleapis.com/auth/spreadsheets']
   });
   return google.sheets({ version: 'v4', auth });
+}
+
+async function getSheetsClient(context?: LogContext) {
+  requireGoogleSheetsConfig();
+
+  if (getGoogleSheetsAuthMode() === 'workload_identity') {
+    return createWorkloadIdentitySheetsClient(context?.vercelOidcToken);
+  }
+
+  return getJsonKeySheetsClient();
 }
 
 export function recordToSheetRow(record: CallLogRecord): string[] {
@@ -135,9 +154,9 @@ export function recordToSheetRow(record: CallLogRecord): string[] {
 }
 
 export class GoogleSheetsLogSink implements LogSink {
-  async append(record: CallLogRecord): Promise<void> {
+  async append(record: CallLogRecord, context?: LogContext): Promise<void> {
     try {
-      const sheets = getSheetsClient();
+      const sheets = await getSheetsClient(context);
       await sheets.spreadsheets.values.append({
         spreadsheetId: config.GOOGLE_SHEETS_SPREADSHEET_ID,
         range: `'${config.GOOGLE_SHEETS_TAB_NAME}'!A:V`,
@@ -159,7 +178,7 @@ export class GoogleSheetsLogSink implements LogSink {
 }
 
 export async function seedGoogleSheetHeader(): Promise<void> {
-  const sheets = getSheetsClient();
+  const sheets = await getSheetsClient();
   await sheets.spreadsheets.values.update({
     spreadsheetId: config.GOOGLE_SHEETS_SPREADSHEET_ID,
     range: `'${config.GOOGLE_SHEETS_TAB_NAME}'!A1:V1`,
