@@ -6,22 +6,44 @@ Use this direction for the capstone submission:
 
 ```text
 Retell AI phone agent
-→ ElevenLabs custom voice
-→ Node.js backend webhook
-→ Google Sheets call log
+-> ElevenLabs custom voice
+-> Node.js backend webhook
+-> Google Sheets call log
 ```
 
 Use n8n as an optional fallback or extension:
 
 ```text
 Retell AI phone agent
-→ n8n webhook
-→ Google Sheets call log
+-> n8n webhook
+-> Google Sheets call log
 ```
 
 ## Why Retell plus ElevenLabs
 
 This project does not require Vapi. The brief requires a working voice assistant, accurate knowledge handling, data capture, and visible logging. Retell provides the phone-agent layer. ElevenLabs provides the differentiated custom voice asset. The backend in this repository provides the controlled webhook and validation layer.
+
+## Current Retell configuration
+
+Issue #4 configuration evidence is tracked in:
+
+```text
+docs/RETELL_AGENT_CONFIGURATION.md
+```
+
+Current configured Retell objects:
+
+```text
+Retell LLM: llm_5bf4bf80d471d52a9de7f0aec4a8
+Retell Agent: agent_18dafa1d3bf6038320ad0be4a7
+Retell Voice: custom_voice_2078deacf9cdf5096ba2124a06
+```
+
+Current production backend:
+
+```text
+https://mama-tees-ai-concierge.vercel.app
+```
 
 ## Retell setup checklist
 
@@ -35,7 +57,7 @@ This project does not require Vapi. The brief requires a working voice assistant
 POST https://YOUR_DEPLOYED_BACKEND_URL/api/call-logs
 ```
 
-6. Add this header:
+6. Add this header in Retell only:
 
 ```text
 X-Webhook-Secret: YOUR_WEBHOOK_SECRET
