@@ -46,62 +46,48 @@ The same schema is implemented in:
 src/services/googleSheets.ts
 ```
 
-## Service account setup
+## Preferred production authentication: Vercel OIDC and Google Workload Identity Federation
 
-1. Open Google Cloud Console.
-2. Create or select a project.
-3. Enable Google Sheets API.
-4. Create a service account dedicated to this backend.
-5. Generate a JSON key for the service account.
-6. Copy the service account email.
-7. Open the Google Sheet.
-8. Share the Sheet with the service account email as Editor.
+Use this path for production and staging. It avoids long-lived Google private keys in Vercel.
 
-Use least privilege: the service account should only receive Editor access to this spreadsheet, not broader Drive access.
-
-## Backend environment variables
-
-Set these in Vercel Project Settings. Do not commit actual values.
+Set these environment variables in Vercel:
 
 ```text
 LOG_DESTINATION=google_sheets
 GOOGLE_SHEETS_SPREADSHEET_ID=1TYO9pj59qYfBeExiKLVYuvD9QB1jSFAhFb5rGBv4mB8
 GOOGLE_SHEETS_TAB_NAME=Call Logs
+GCP_PROJECT_ID=<google-cloud-project-id>
+GCP_PROJECT_NUMBER=<google-cloud-project-number>
+GCP_SERVICE_ACCOUNT_EMAIL=<service-account-email>
+GCP_WORKLOAD_IDENTITY_POOL_ID=vercel
+GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID=vercel
+```
+
+Also enable Vercel OIDC for the project. The backend reads the request-scoped `x-vercel-oidc-token` header supplied by Vercel Functions and exchanges it for a Google service-account access token.
+
+The Google service account must have:
+
+1. Workload Identity User binding for the Vercel principal.
+2. Editor access to the `Mama Tee's Kitchen Call Logs` spreadsheet only.
+3. Google Sheets API enabled in the Google Cloud project.
+4. IAM Service Account Credentials API enabled if service-account impersonation is used.
+
+## Legacy local fallback: JSON service account key
+
+Use this only for local development or if Vercel OIDC is unavailable.
+
+```text
 GOOGLE_SERVICE_ACCOUNT_EMAIL=<service-account-email>
 GOOGLE_PRIVATE_KEY=<private-key-with-escaped-newlines>
 ```
 
-Recommended Vercel storage types:
-
-```text
-LOG_DESTINATION: plain
-GOOGLE_SHEETS_SPREADSHEET_ID: plain
-GOOGLE_SHEETS_TAB_NAME: plain
-GOOGLE_SERVICE_ACCOUNT_EMAIL: encrypted or sensitive
-GOOGLE_PRIVATE_KEY: sensitive
-```
-
-Keep `GOOGLE_PRIVATE_KEY` in the deployment secret manager. Do not commit it, paste it into issue comments, or show it in screenshots or Loom recordings.
-
-## Private key formatting
-
-Copy only the `private_key` value from the service-account JSON. Do not paste the entire JSON file into `GOOGLE_PRIVATE_KEY`.
-
-Vercel can store either actual newlines or escaped newlines. The backend normalizes both of these forms:
-
-```text
------BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n
-```
-
-```text
-"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
-```
+Do not use `GOOGLE_PRIVATE_KEY` for production when Vercel OIDC is configured. Do not commit a service account JSON file.
 
 ## Runtime readiness behavior
 
 `/healthz` remains available as a liveness probe.
 
-`/readiness` returns `503 not_ready` if `LOG_DESTINATION=google_sheets` is enabled but required Google Sheets credentials are missing. This prevents a partially configured public deployment from being treated as ready.
+`/readiness` returns `503 not_ready` if `LOG_DESTINATION=google_sheets` is enabled but required Google Sheets target or authentication configuration is missing. When ready, it includes `google_sheets_auth_mode` with either `workload_identity` or `json_key`.
 
 ## Authenticated write validation
 
@@ -130,8 +116,12 @@ Authenticated writes return sanitized diagnostic codes when Google Sheets append
 
 | Code | Meaning | Fix |
 |---|---|---|
-| `GOOGLE_PRIVATE_KEY_INVALID` | Private key value is malformed or pasted incorrectly. | Copy only the JSON `private_key` value and preserve or escape newlines. |
-| `GOOGLE_AUTH_FAILED` | Google rejected the JWT credentials. | Confirm service-account email and key belong to the same service account. |
+| `VERCEL_OIDC_TOKEN_MISSING` | Vercel did not provide the function OIDC token. | Enable OIDC for the Vercel project and redeploy. |
+| `GOOGLE_WORKLOAD_IDENTITY_TOKEN_EXCHANGE_FAILED` | Google STS rejected the Vercel OIDC token. | Check the workload identity pool/provider issuer, audience, and principal mapping. |
+| `GOOGLE_WORKLOAD_IDENTITY_PERMISSION_DENIED` | The Vercel principal cannot impersonate the service account. | Recheck the service account Workload Identity User binding. |
+| `GOOGLE_SERVICE_ACCOUNT_IMPERSONATION_FAILED` | Service account token generation failed. | Confirm IAMCredentials API access and service account permissions. |
+| `GOOGLE_PRIVATE_KEY_INVALID` | Legacy private key value is malformed. | Prefer Vercel OIDC. For local fallback, copy only the JSON `private_key` value. |
+| `GOOGLE_AUTH_FAILED` | Google rejected credentials. | Confirm auth configuration belongs to the intended service account. |
 | `GOOGLE_SHEETS_PERMISSION_DENIED` | Service account cannot edit the Sheet or Sheets API access is denied. | Share the Sheet with the service account email as Editor and confirm Sheets API is enabled. |
 | `GOOGLE_SHEETS_TARGET_NOT_FOUND` | Spreadsheet ID or tab is wrong, or inaccessible. | Confirm spreadsheet ID and `Call Logs` tab. |
 | `GOOGLE_SHEETS_REQUEST_INVALID` | Google Sheets rejected the append range or request. | Confirm the tab name and sheet schema. |
@@ -141,9 +131,11 @@ Authenticated writes return sanitized diagnostic codes when Google Sheets append
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| `/readiness` returns `503 not_ready` | Missing webhook or Google Sheets env var | Check Vercel env keys without exposing values. |
-| 502 with `GOOGLE_PRIVATE_KEY_INVALID` | Private key formatting issue | Use the JSON `private_key` value, not the full JSON file. |
+| `/readiness` returns `503 not_ready` | Missing webhook, sheet target, or Google auth env var | Check Vercel env keys without exposing values. |
+| `/readiness` shows `google_sheets_auth_mode=json_key` | WIF env vars are missing and app is falling back to private-key auth | Add the `GCP_*` variables and redeploy. |
+| 502 with `VERCEL_OIDC_TOKEN_MISSING` | Vercel OIDC is not enabled or header is unavailable | Enable OIDC for the Vercel project and redeploy. |
+| 502 with `GOOGLE_WORKLOAD_IDENTITY_TOKEN_EXCHANGE_FAILED` | WIF provider config mismatch | Check issuer, audience, and provider attribute mapping. |
+| 502 with `GOOGLE_WORKLOAD_IDENTITY_PERMISSION_DENIED` | Missing service account IAM binding | Grant Workload Identity User to the Vercel principal. |
 | 502 with `GOOGLE_SHEETS_PERMISSION_DENIED` | Service account not shared or API disabled | Share Sheet with service account as Editor and enable Sheets API. |
-| 502 with `GOOGLE_AUTH_FAILED` | Email/key mismatch or invalid service account key | Regenerate the service account key and update both env vars. |
 | No new row | Wrong spreadsheet ID or tab name | Confirm ID and `Call Logs` tab. |
 | Values in wrong columns | Header mismatch | Compare Sheet header with `SHEET_COLUMNS`. |
