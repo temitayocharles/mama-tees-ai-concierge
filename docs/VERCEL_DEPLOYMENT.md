@@ -58,7 +58,7 @@ GOOGLE_PRIVATE_KEY=<set in Vercel only, escaped newlines>
 BUSINESS_TIMEZONE=Africa/Lagos
 ```
 
-`WEBHOOK_SECRET` is required for call-log writes. If it is missing, `/healthz` and `/readiness` remain available, but `POST /api/call-logs` returns `503` and refuses to write records.
+`WEBHOOK_SECRET` is required for call-log writes. If it is missing, `/healthz` remains available, `/readiness` returns `503 not_ready`, and `POST /api/call-logs` returns `503` without writing records.
 
 `PORT` is not required on Vercel because Vercel manages the function runtime. Do not set `NODE_ENV=production` in a way that prevents dev dependencies from being installed during the build step.
 
@@ -68,7 +68,7 @@ After deployment, validate the public URL:
 
 ```bash
 curl -sS https://<vercel-url>/healthz
-curl -sS https://<vercel-url>/readiness
+curl -i https://<vercel-url>/readiness
 ```
 
 Expected `/healthz` response:
@@ -77,15 +77,19 @@ Expected `/healthz` response:
 {"status":"ok"}
 ```
 
-Expected `/readiness` response includes:
+Expected `/readiness` response after all required environment variables are configured:
 
 ```json
 {
   "status": "ready",
+  "webhook_auth_configured": true,
   "log_destination": "google_sheets",
+  "google_sheets_configured": true,
   "business_timezone": "Africa/Lagos"
 }
 ```
+
+Expected `/readiness` response before `WEBHOOK_SECRET` or Google Sheets credentials are configured: HTTP `503` with `status` set to `not_ready`.
 
 Validate webhook protection after `WEBHOOK_SECRET` is configured:
 
