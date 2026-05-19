@@ -17,7 +17,7 @@ Retell AI phone agent
 
 ## Repository files
 
-New Vercel-specific files:
+Vercel-specific files:
 
 - `api/index.ts`: exports the existing Express app for Vercel Functions.
 - `vercel.json`: configures install, build, and route rewrites for the API.
@@ -36,20 +36,21 @@ Use these project settings:
 
 ```text
 Framework: Express
-Install command: npm ci
+Install command: npm ci --include=dev
 Build command: npm run build
 Root directory: repository root
 Production branch: main
 ```
+
+The install command intentionally includes dev dependencies because the TypeScript compiler is a dev dependency required during the build step. Runtime dependencies remain controlled by `package-lock.json`.
 
 ## Required environment variables
 
 Configure these values in Vercel Project Settings. Do not commit actual credentials.
 
 ```text
-NODE_ENV=production
-LOG_DESTINATION=google_sheets
 WEBHOOK_SECRET=<set in Vercel only>
+LOG_DESTINATION=google_sheets
 GOOGLE_SHEETS_SPREADSHEET_ID=1TYO9pj59qYfBeExiKLVYuvD9QB1jSFAhFb5rGBv4mB8
 GOOGLE_SHEETS_TAB_NAME=Call Logs
 GOOGLE_SERVICE_ACCOUNT_EMAIL=<set in Vercel only>
@@ -57,7 +58,9 @@ GOOGLE_PRIVATE_KEY=<set in Vercel only, escaped newlines>
 BUSINESS_TIMEZONE=Africa/Lagos
 ```
 
-`PORT` is not required on Vercel because Vercel manages the function runtime.
+`WEBHOOK_SECRET` is required for call-log writes. If it is missing, `/healthz` and `/readiness` remain available, but `POST /api/call-logs` returns `503` and refuses to write records.
+
+`PORT` is not required on Vercel because Vercel manages the function runtime. Do not set `NODE_ENV=production` in a way that prevents dev dependencies from being installed during the build step.
 
 ## Validation
 
@@ -84,7 +87,7 @@ Expected `/readiness` response includes:
 }
 ```
 
-Validate webhook protection:
+Validate webhook protection after `WEBHOOK_SECRET` is configured:
 
 ```bash
 curl -i -X POST https://<vercel-url>/api/call-logs \
@@ -108,7 +111,7 @@ Validate successful writes only after the Vercel environment variables are confi
 
 If Vercel deployment fails or the voice platform cannot reach it:
 
-1. Disable or remove the Vercel project deployment.
-2. Keep the repository branch open for review.
+1. Promote the previous known-good deployment or pause use of the Vercel endpoint.
+2. Keep the repository branch open for review until checks are green.
 3. Continue using the existing `render.yaml` path as an alternative deployment target.
 4. Do not change the Google Sheet or business rules while rolling back deployment hosting.

@@ -5,7 +5,7 @@ const configSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(8080),
   CORS_ORIGIN: z.string().default('*'),
-  WEBHOOK_SECRET: z.string().min(12, 'WEBHOOK_SECRET must be at least 12 characters'),
+  WEBHOOK_SECRET: z.string().default(''),
   LOG_DESTINATION: z.enum(['local_jsonl', 'google_sheets']).default('local_jsonl'),
   LOCAL_LOG_PATH: z.string().default('storage/call-logs.jsonl'),
   GOOGLE_SHEETS_SPREADSHEET_ID: z.string().optional().default(''),
@@ -19,7 +19,7 @@ export const config = configSchema.parse({
   NODE_ENV: process.env.NODE_ENV,
   PORT: process.env.PORT,
   CORS_ORIGIN: process.env.CORS_ORIGIN,
-  WEBHOOK_SECRET: process.env.WEBHOOK_SECRET ?? 'development-only-secret',
+  WEBHOOK_SECRET: process.env.WEBHOOK_SECRET,
   LOG_DESTINATION: process.env.LOG_DESTINATION,
   LOCAL_LOG_PATH: process.env.LOCAL_LOG_PATH,
   GOOGLE_SHEETS_SPREADSHEET_ID: process.env.GOOGLE_SHEETS_SPREADSHEET_ID,
@@ -28,6 +28,10 @@ export const config = configSchema.parse({
   GOOGLE_PRIVATE_KEY: process.env.GOOGLE_PRIVATE_KEY,
   BUSINESS_TIMEZONE: process.env.BUSINESS_TIMEZONE
 });
+
+export function isWebhookSecretConfigured(): boolean {
+  return config.WEBHOOK_SECRET.trim().length >= 12;
+}
 
 export function requireGoogleSheetsConfig(): void {
   if (config.LOG_DESTINATION !== 'google_sheets') return;
