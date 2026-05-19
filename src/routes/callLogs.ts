@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Router } from 'express';
-import { config } from '../config.js';
+import { config, isWebhookSecretConfigured } from '../config.js';
 import { logger } from '../logger.js';
 import { validateDelivery, validateReservation, buildConfirmationSummary } from '../domain/businessRules.js';
 import { knowledgeBase } from '../domain/knowledgeBase.js';
@@ -14,8 +14,13 @@ export function createCallLogsRouter(logSink: LogSink): Router {
   });
 
   router.post('/api/call-logs', async (req, res) => {
+    if (!isWebhookSecretConfigured()) {
+      logger.error('WEBHOOK_SECRET is not configured; refusing call-log writes');
+      return res.status(503).json({ error: 'Webhook authentication is not configured' });
+    }
+
     const providedSecret = req.header('X-Webhook-Secret');
-    if (providedSecret !== config.WEBHOOK_SECRET) {
+    if (!providedSecret || providedSecret !== config.WEBHOOK_SECRET) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 

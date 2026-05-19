@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "framework": "express",
+  "buildCommand": "npm run build",
+  "installCommand": "npm ci --include=dev",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api/index"
+    }
+  ]
+}
