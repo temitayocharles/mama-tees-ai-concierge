@@ -1,16 +1,7 @@
 import { Router } from 'express';
-import { config, isWebhookSecretConfigured } from '../config.js';
+import { config, isGoogleSheetsConfigured, isWebhookSecretConfigured } from '../config.js';
 
 export const healthRouter = Router();
-
-function isGoogleSheetsConfigured(): boolean {
-  if (config.LOG_DESTINATION !== 'google_sheets') return true;
-  return Boolean(
-    config.GOOGLE_SHEETS_SPREADSHEET_ID &&
-      config.GOOGLE_SERVICE_ACCOUNT_EMAIL &&
-      config.GOOGLE_PRIVATE_KEY
-  );
-}
 
 healthRouter.get('/healthz', (_req, res) => {
   res.status(200).json({ status: 'ok' });

@@ -1,6 +1,6 @@
 import { mkdir, appendFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import { config, requireGoogleSheetsConfig } from '../config.js';
+import { config } from '../config.js';
 import type { CallLogRecord, LogSink } from '../types.js';
 import { GoogleSheetsLogSink } from './googleSheets.js';
 
@@ -15,7 +15,6 @@ export class LocalJsonlLogSink implements LogSink {
 
 export function createLogSink(): LogSink {
   if (config.LOG_DESTINATION === 'google_sheets') {
-    requireGoogleSheetsConfig();
     return new GoogleSheetsLogSink();
   }
 

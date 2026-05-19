@@ -1,5 +1,5 @@
 import { google } from 'googleapis';
-import { config } from '../config.js';
+import { config, requireGoogleSheetsConfig } from '../config.js';
 import type { CallLogRecord, LogSink } from '../types.js';
 
 export const SHEET_COLUMNS = [
@@ -32,6 +32,8 @@ function normalizePrivateKey(rawKey: string): string {
 }
 
 function getSheetsClient() {
+  requireGoogleSheetsConfig();
+
   const auth = new google.auth.JWT({
     email: config.GOOGLE_SERVICE_ACCOUNT_EMAIL,
     key: normalizePrivateKey(config.GOOGLE_PRIVATE_KEY),
@@ -56,7 +58,7 @@ export class GoogleSheetsLogSink implements LogSink {
     const sheets = getSheetsClient();
     await sheets.spreadsheets.values.append({
       spreadsheetId: config.GOOGLE_SHEETS_SPREADSHEET_ID,
-      range: `${config.GOOGLE_SHEETS_TAB_NAME}!A:V`,
+      range: `'${config.GOOGLE_SHEETS_TAB_NAME}'!A:V`,
       valueInputOption: 'USER_ENTERED',
       requestBody: {
         values: [recordToSheetRow(record)]
@@ -69,7 +71,7 @@ export async function seedGoogleSheetHeader(): Promise<void> {
   const sheets = getSheetsClient();
   await sheets.spreadsheets.values.update({
     spreadsheetId: config.GOOGLE_SHEETS_SPREADSHEET_ID,
-    range: `${config.GOOGLE_SHEETS_TAB_NAME}!A1:V1`,
+    range: `'${config.GOOGLE_SHEETS_TAB_NAME}'!A1:V1`,
     valueInputOption: 'RAW',
     requestBody: {
       values: [Array.from(SHEET_COLUMNS)]
