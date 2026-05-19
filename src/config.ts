@@ -33,15 +33,26 @@ export function isWebhookSecretConfigured(): boolean {
   return config.WEBHOOK_SECRET.trim().length >= 12;
 }
 
+export function isGoogleSheetsConfigured(): boolean {
+  if (config.LOG_DESTINATION !== 'google_sheets') return true;
+
+  return Boolean(
+    config.GOOGLE_SHEETS_SPREADSHEET_ID.trim() &&
+      config.GOOGLE_SHEETS_TAB_NAME.trim() &&
+      config.GOOGLE_SERVICE_ACCOUNT_EMAIL.trim() &&
+      config.GOOGLE_PRIVATE_KEY.trim()
+  );
+}
+
 export function requireGoogleSheetsConfig(): void {
-  if (config.LOG_DESTINATION !== 'google_sheets') return;
+  if (isGoogleSheetsConfigured()) return;
+
   const missing = [
     ['GOOGLE_SHEETS_SPREADSHEET_ID', config.GOOGLE_SHEETS_SPREADSHEET_ID],
+    ['GOOGLE_SHEETS_TAB_NAME', config.GOOGLE_SHEETS_TAB_NAME],
     ['GOOGLE_SERVICE_ACCOUNT_EMAIL', config.GOOGLE_SERVICE_ACCOUNT_EMAIL],
     ['GOOGLE_PRIVATE_KEY', config.GOOGLE_PRIVATE_KEY]
-  ].filter(([, value]) => !value);
+  ].filter(([, value]) => !value?.trim());
 
-  if (missing.length > 0) {
-    throw new Error(`Missing Google Sheets configuration: ${missing.map(([name]) => name).join(', ')}`);
-  }
+  throw new Error(`Missing Google Sheets configuration: ${missing.map(([name]) => name).join(', ')}`);
 }
