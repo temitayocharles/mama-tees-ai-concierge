@@ -41,6 +41,10 @@ export interface CallLogRecord extends CallLogRequest {
   validation_warnings: string[];
 }
 
+export interface LogContext {
+  vercelOidcToken?: string;
+}
+
 export interface LogSink {
-  append(record: CallLogRecord): Promise<void>;
+  append(record: CallLogRecord, context?: LogContext): Promise<void>;
 }

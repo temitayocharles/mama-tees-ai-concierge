@@ -70,7 +70,9 @@ export function createCallLogsRouter(logSink: LogSink): Router {
     };
 
     try {
-      await logSink.append(record);
+      await logSink.append(record, {
+        vercelOidcToken: req.header('x-vercel-oidc-token')
+      });
       return res.status(201).json({
         status: 'logged',
         id: record.id,
