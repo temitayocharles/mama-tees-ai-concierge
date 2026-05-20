@@ -1,0 +1,201 @@
+{
+  "name": "Mama Tee - Fallback Call Log Webhook",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "mama-tees-fallback-call-log",
+        "responseMode": "responseNode",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "fallback-call-log-webhook",
+      "name": "Fallback Call Log Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "04f3ff33-4fe7-4456-88c2-9ace73062af9"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const first = $input.first();\nconst incoming = first?.json ?? {};\nconst body = incoming.body && typeof incoming.body === 'object' && !Array.isArray(incoming.body) ? incoming.body : incoming;\n\nconst payload = body && typeof body === 'object' && !Array.isArray(body) ? { ...body } : {};\n\nif (!payload.source) {\n  payload.source = 'n8n_fallback';\n}\n\nreturn [{ json: { payload } }];"
+      },
+      "id": "normalize-payload",
+      "name": "Normalize Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mama-tees-ai-concierge.vercel.app/api/call-logs",
+        "authentication": "none",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Webhook-Secret",
+              "value": "={{ $vars.MAMA_TEES_WEBHOOK_SECRET }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.payload }}",
+        "options": {
+          "timeout": 10000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "forward-to-vercel-backend",
+      "name": "Forward to Vercel Backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        540,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const first = $input.first();\nconst backend = first?.json ?? {};\nconst backendStatus = Number(backend.statusCode ?? backend.status ?? 502);\nconst success = backendStatus === 201;\n\nconst responseCode = success ? 201 : (backendStatus >= 400 && backendStatus <= 599 ? backendStatus : 502);\nconst responseBody = success\n  ? { status: 'success', message: 'Call log accepted by backend.', backend_status: backendStatus }\n  : { status: 'error', message: 'Call log forwarding failed.', backend_status: responseCode };\n\nreturn [{ json: { responseCode, responseBody } }];"
+      },
+      "id": "build-sanitized-response",
+      "name": "Build Sanitized Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        820,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.responseBody }}",
+        "options": {
+          "responseCode": "={{ $json.responseCode }}",
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "respond-to-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1100,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Mama Tee - Fallback Call Log Webhook\nOptional fallback workflow. Accepts call-log JSON, forwards it to the production Vercel backend, and returns a sanitized response. Configure the n8n variable MAMA_TEES_WEBHOOK_SECRET securely before testing. Do not paste the value into this workflow.",
+        "color": 3,
+        "width": 1240,
+        "height": 180
+      },
+      "id": "workflow-note",
+      "name": "Workflow Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        260,
+        160
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Fallback Call Log Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Payload": {
+      "main": [
+        [
+          {
+            "node": "Forward to Vercel Backend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Forward to Vercel Backend": {
+      "main": [
+        [
+          {
+            "node": "Build Sanitized Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Sanitized Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "58b0c2e9-7baf-491f-a4d2-29108cb6047a",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
