@@ -1,81 +1,105 @@
 # Voice Agent Platform Setup
 
-## Recommended stack
-
-Use this direction for the capstone submission:
+## Primary voice stack
 
 ```text
 Retell AI phone agent
-→ ElevenLabs custom voice
-→ Node.js backend webhook
-→ Google Sheets call log
+  -> ElevenLabs custom voice
+  -> Vercel Node.js backend webhook
+  -> Google Sheets visible call log
 ```
 
-Use n8n as an optional fallback or extension:
+The backend remains the control boundary for authentication, validation, delivery rules, reservation rules, sanitized errors, and call-log persistence.
+
+## Configured Retell objects
 
 ```text
-Retell AI phone agent
-→ n8n webhook
-→ Google Sheets call log
+Retell LLM: llm_5bf4bf80d471d52a9de7f0aec4a8
+Retell Agent: agent_18dafa1d3bf6038320ad0be4a7
+Retell Voice: custom_voice_2078deacf9cdf5096ba2124a06
+Phone number: +1 (431) 500-6652
 ```
 
-## Why Retell plus ElevenLabs
-
-This project does not require Vapi. The brief requires a working voice assistant, accurate knowledge handling, data capture, and visible logging. Retell provides the phone-agent layer. ElevenLabs provides the differentiated custom voice asset. The backend in this repository provides the controlled webhook and validation layer.
-
-## Retell setup checklist
-
-1. Create a Retell account.
-2. Create a new phone agent.
-3. Configure the LLM/system prompt using `prompts/voice-agent-system-prompt.md`.
-4. Configure the agent voice using your ElevenLabs custom voice, if Retell account settings support ElevenLabs voice provider integration.
-5. Add a webhook/tool that calls the deployed backend:
+Retell phone routing:
 
 ```text
-POST https://YOUR_DEPLOYED_BACKEND_URL/api/call-logs
+Inbound agent: agent_18dafa1d3bf6038320ad0be4a7
+Outbound agent: agent_18dafa1d3bf6038320ad0be4a7 version 0
+Published agent version: 0
+Current draft agent version: 1
 ```
 
-6. Add this header:
+## Production backend
 
 ```text
-X-Webhook-Secret: YOUR_WEBHOOK_SECRET
+https://mama-tees-ai-concierge.vercel.app
 ```
 
-7. Use the schema from `prompts/voice-agent-tool-schema.md`.
-8. Assign a test phone number.
-9. Place test calls for order, reservation, delivery rejection, and fallback callback.
-10. Confirm new rows appear in Google Sheets.
+Tool endpoint:
 
-## ElevenLabs setup checklist
+```text
+POST https://mama-tees-ai-concierge.vercel.app/api/call-logs
+```
 
-1. Open ElevenLabs.
-2. Confirm your cloned/custom voice is available.
-3. Copy the voice ID if required by Retell.
-4. Use the voice only if you have the right to use it for this project.
-5. Keep disclosure in the greeting: callers should know they are speaking with an automated assistant.
+The voice tool must send:
 
-## Required voice behavior
+```text
+Content-Type: application/json
+X-Webhook-Secret: configured securely in Retell only
+```
+
+Do not place the header value in the prompt, repository, screenshots, transcripts, or recordings.
+
+## Assistant behavior requirements
 
 The assistant must:
 
-- Identify itself as an automated assistant.
-- Answer only from the knowledge base.
-- Ask one question at a time.
-- Confirm details before logging.
-- Enforce delivery and reservation policies.
-- Escalate unknown requests into callback logs.
+- identify itself as automated,
+- answer only from the approved restaurant knowledge base,
+- ask one question at a time,
+- confirm details before logging,
+- enforce delivery and reservation policies,
+- log confirmed orders, reservations, callbacks, complaints, catering requests, and general inquiries,
+- offer callback logging when a request is outside supported scope,
+- avoid collecting card details or banking passwords,
+- avoid promising unsupported delivery areas or availability.
 
-## Demo tests
+## Validation calls
 
-Use these test calls before recording Loom:
+Run live calls through:
 
-1. Ask opening hours.
-2. Ask the price of large Jollof Rice, chicken, and Malt.
-3. Place a delivery order to Wuse 2.
-4. Ask for Sunday delivery.
-5. Ask to reserve for 4 guests.
-6. Ask an unknown catering question and confirm callback logging.
+```text
++1 (431) 500-6652
+```
 
-## Caveat
+Required scenarios:
 
-If Retell account setup or ElevenLabs voice integration becomes blocked by account limits, use the same backend with any voice platform that can make an HTTP POST tool call. The project is platform-agnostic.
+1. Opening-hours FAQ.
+2. Menu and price FAQ.
+3. Delivery order to Wuse 2.
+4. Sunday delivery rejection.
+5. Invalid reservation for 4 guests.
+6. Valid reservation for 5 or more guests.
+7. Callback request for an unsupported or uncertain request.
+8. Pronunciation check for naira amounts, 10am, Agidi, Egusi, Ewedu, Gbegiri, Shaki, Ponmo, Eba, Amala, Adetokunbo Ademola Crescent, Wuse, and Abuja.
+
+Expected evidence:
+
+- caller hears automated-assistant disclosure,
+- policies are followed,
+- confirmed tool calls write rows to Google Sheets,
+- no credentials appear in evidence,
+- unsupported requests become callback logs rather than invented answers.
+
+## Optional automation fallback
+
+n8n is an optional fallback and extension path:
+
+```text
+Voice platform or HTTP caller
+  -> n8n webhook
+  -> Vercel backend /api/call-logs
+  -> Google Sheets visible call log
+```
+
+Do not use n8n to bypass the backend validation layer.

@@ -1,131 +1,108 @@
-# Deployment Guide
+# Deployment
 
-## Goal
-
-Deploy the Node.js backend so the selected voice platform can call:
+## Production backend
 
 ```text
+https://mama-tees-ai-concierge.vercel.app
+```
+
+The backend is deployed on Vercel and exposes:
+
+```text
+GET  /healthz
+GET  /readiness
 POST /api/call-logs
 ```
 
-The recommended production-like path for this capstone is Render, Railway, Fly.io, or another always-on Node.js host. Render is documented because `render.yaml` is included.
+## Runtime configuration
 
-## Required environment variables
+Required production configuration must be stored in the deployment platform environment, not in source control.
+
+Required categories:
+
+- webhook authentication value,
+- Google Workload Identity Federation configuration,
+- Google service account impersonation target,
+- Google Sheets spreadsheet ID and sheet name,
+- business timezone,
+- log destination.
+
+Do not commit `.env`.
+
+## Google authentication
+
+Production uses:
 
 ```text
-NODE_ENV=production
-PORT=8080
-LOG_DESTINATION=google_sheets
-WEBHOOK_SECRET=<long-random-secret>
-GOOGLE_SHEETS_SPREADSHEET_ID=1TYO9pj59qYfBeExiKLVYuvD9QB1jSFAhFb5rGBv4mB8
-GOOGLE_SHEETS_TAB_NAME=Call Logs
-GOOGLE_SERVICE_ACCOUNT_EMAIL=<service-account-email>
-GOOGLE_PRIVATE_KEY=<private-key-with-escaped-newlines>
-BUSINESS_TIMEZONE=Africa/Lagos
+Vercel OIDC
+  -> Google Workload Identity Federation
+  -> service account impersonation
+  -> Google Sheets append
 ```
 
-Do not commit any secret values.
+Do not use Google private keys for production.
 
-## Local validation before deployment
+## Validation commands
+
+Install dependencies:
 
 ```bash
-npm install
+npm ci
+```
+
+Build:
+
+```bash
 npm run build
+```
+
+Run tests:
+
+```bash
 npm test
-cp .env.example .env
-npm run dev
 ```
 
-Health check:
+Optional audit:
 
 ```bash
-curl http://localhost:8080/healthz
+npm audit --omit=dev
 ```
 
-Expected response:
-
-```json
-{"status":"ok"}
-```
-
-Smoke test:
+## Production readiness check
 
 ```bash
-WEBHOOK_SECRET=replace-with-a-long-random-secret ./scripts/test-api.sh
+curl https://mama-tees-ai-concierge.vercel.app/readiness
 ```
 
-Expected outcome:
-
-```text
-Order log: HTTP 201
-Reservation log: HTTP 201
-Callback log: HTTP 201
-```
-
-## Render deployment
-
-1. Open Render.
-2. Create a new Web Service.
-3. Connect this GitHub repository.
-4. Use the Node runtime.
-5. Build command:
-
-```bash
-npm install && npm run build
-```
-
-6. Start command:
-
-```bash
-npm start
-```
-
-7. Add the required environment variables.
-8. Deploy.
-9. Open the deployed `/healthz` endpoint.
-
-Expected:
-
-```json
-{"status":"ok"}
-```
-
-## Google Sheets verification
-
-After deployment, send an order payload to the deployed backend:
-
-```bash
-curl -X POST https://YOUR_BACKEND_URL/api/call-logs \
-  -H "Content-Type: application/json" \
-  -H "X-Webhook-Secret: YOUR_WEBHOOK_SECRET" \
-  --data-binary @examples/order-log.json
-```
-
-Expected:
+Expected result:
 
 ```json
 {
-  "status": "logged"
+  "status": "ready",
+  "webhook_auth_configured": true,
+  "log_destination": "google_sheets",
+  "google_sheets_configured": true,
+  "google_sheets_auth_mode": "workload_identity",
+  "business_timezone": "Africa/Lagos"
 }
 ```
 
-Then check the Google Sheet for a new row.
-
 ## Rollback
 
-If deployment fails:
+If a backend deployment breaks request logging:
 
-1. Switch `LOG_DESTINATION` to `local_jsonl` to isolate Google credential problems.
-2. Redeploy the last known good GitHub commit.
-3. Disable the voice-agent webhook until `/healthz` and a smoke-test payload succeed.
-4. Rotate `WEBHOOK_SECRET` if it was exposed during testing.
+1. Stop new changes.
+2. Confirm `/healthz` and `/readiness` status.
+3. Check Vercel deployment status.
+4. Roll back to the previous known-good Vercel deployment.
+5. Re-run backend logging validation.
+6. Verify Google Sheets receives a new safe validation row.
+7. Document the incident and root cause.
 
-## Troubleshooting
+## Security controls
 
-| Symptom | Likely cause | Fix |
-|---|---|---|
-| `/healthz` fails | App not running | Check build logs and start command. |
-| 401 on `/api/call-logs` | Missing or wrong `X-Webhook-Secret` | Match voice platform header with backend secret. |
-| 500 on valid payload | Google Sheets config problem | Verify service account email, private key formatting, and Sheet sharing. |
-| No Sheet row | Wrong spreadsheet ID or tab | Confirm Sheet ID and tab name. |
-| Voice tool fails | Wrong deployed URL or schema | Compare with `prompts/voice-agent-tool-schema.md`. |
+- Keep all credentials out of GitHub.
+- Keep all credentials out of issue comments, screenshots, transcripts, and recordings.
+- Rotate any value that is accidentally exposed.
+- Maintain least privilege on the Google service account.
+- Keep Google Sheet access scoped to required reviewers only.

@@ -1,146 +1,107 @@
 # GitHub Project Management
 
-This document defines the labels, milestones, and repository settings expected for this capstone project.
+## Purpose
 
-## Current issue backlog
+This repository uses GitHub issues, branches, pull requests, and milestones to track delivery work for Mama Tee's Kitchen AI Voice Concierge.
 
-| Issue | Purpose |
-|---|---|
-| #1 | Overall capstone delivery epic |
-| #2 | Backend deployment |
-| #3 | Google Sheets logging |
-| #4 | Retell AI plus ElevenLabs voice agent |
-| #5 | n8n fallback or extension |
-| #6 | Composio connector enhancement |
-| #7 | QA against capstone acceptance tests |
-| #8 | Loom and screenshot submission package |
-| #9 | Optional Replit admin or demo interface |
-| #10 | Repository settings, milestones, and deterministic lockfile |
+The workflow is designed to keep changes reviewable, scoped, and safe for a production-facing client system.
 
-## Labels
+## Issue workflow
 
-Expected labels:
+Each meaningful change should map to a GitHub issue.
 
-| Label | Meaning |
-|---|---|
-| blocker | Required before submission readiness. |
-| deployment | Backend, hosting, environment variables, runtime setup. |
-| voice-agent | Retell, ElevenLabs, prompts, tool/webhook behavior. |
-| docs | Documentation, handoff, Loom, submission evidence. |
-| optional | Nice-to-have or non-blocking enhancement. |
-| automation | n8n or workflow automation. |
-| composio | Composio connector work. |
-| connector | External connector integration. |
-| qa | Validation, test execution, acceptance criteria. |
-| submission | Loom, screenshots, and final submission package. |
-| replit | Optional Replit interface work. |
-| ui | Optional interface or dashboard work. |
-| project-management | Repository, milestones, labels, workflow, and issue hygiene. |
+Recommended issue flow:
 
-## Milestones
+1. Confirm the issue scope.
+2. Create a branch from latest `main`.
+3. Make the smallest complete change required.
+4. Preserve business rules unless the issue explicitly requires a change.
+5. Update documentation when behavior changes.
+6. Run validation.
+7. Open a pull request into `main`.
+8. Merge only after checks are green and the scope is reviewed.
 
-Expected milestones:
+## Branch naming
 
-### Core Demo Ready
-
-Use this milestone for issues that must be complete before a credible live demo:
-
-- #2 Deploy backend API and configure production environment.
-- #3 Configure Google Sheets logging and verify write path.
-- #4 Configure Retell AI phone agent with ElevenLabs custom voice.
-- #7 Run full QA against capstone acceptance test matrix.
-
-### Submission Ready
-
-Use this milestone for final packaging and evidence:
-
-- #1 Complete capstone delivery epic.
-- #8 Prepare Loom video and final screenshot submission package.
-- #10 Finalize GitHub repository settings, milestones, and deterministic lockfile.
-
-### Post-Demo Enhancements
-
-Use this milestone for non-blocking improvements:
-
-- #5 Import and validate n8n workflow after backend path is stable.
-- #6 Evaluate and integrate Composio connector as optional enhancement layer.
-- #9 Evaluate optional Replit admin or demo interface.
-
-## Repository visibility
-
-The original recommendation was:
+Use explicit branch names:
 
 ```text
-Private repository before final submission
+issue-4-retell-elevenlabs-agent
+issue-5-n8n-fallback-workflow
+issue-7-qa-acceptance-matrix
+issue-8-delivery-evidence-package
+docs-client-delivery-positioning
 ```
 
-Current state:
+## Pull request expectations
 
-```text
-Public repository
-```
+Each PR should include:
 
-Decision:
+- issue reference,
+- summary of changes,
+- files changed,
+- validation commands run,
+- results,
+- risks,
+- follow-up items,
+- evidence when relevant.
 
-The public state is acceptable only because the repository is being prepared for open-source availability and does not contain committed secrets. If the course provider requires private visibility during grading, change the repository to private before submission and return it to public afterward.
+Use `Resolve #N` or `Closes #N` only when the issue is fully complete.
 
-Controls required for public visibility:
+Use `Progress #N` when the PR moves the issue forward but does not satisfy all closure criteria.
 
-- `.env` remains uncommitted.
-- Google service account JSON files are never committed.
-- Webhook secrets are never committed.
-- Retell, ElevenLabs, Vercel, Google, and Composio credentials are never committed.
-- Screenshots and Loom recordings hide secrets, billing pages, and account-security pages.
-- GitHub secret scanning and push protection remain enabled.
+## Validation baseline
 
-## Repository settings
-
-Recommended settings:
-
-| Setting | Recommended value |
-|---|---|
-| Default branch | `main` |
-| Homepage | `https://mama-tees-ai-concierge.vercel.app` |
-| Issues | Enabled |
-| Projects | Enabled |
-| Wiki | Optional |
-| Squash merge | Enabled |
-| Merge commits | Disabled |
-| Rebase merge | Enabled |
-| Delete branch on merge | Enabled |
-| Secret scanning | Enabled |
-| Secret scanning push protection | Enabled |
-| Branch protection for `main` | Enabled if supported by repository plan |
-| Required checks | `build-test`, `package-lock` if branch protection supports them |
-
-## Deterministic dependency policy
-
-`package-lock.json` must remain committed to `main`.
-
-CI must use:
-
-```bash
-npm ci
-```
-
-Local validation should use:
+Run, or confirm CI runs:
 
 ```bash
 npm ci
 npm run build
 npm test
+```
+
+Optional audit:
+
+```bash
 npm audit --omit=dev
 ```
 
-## Manual GitHub settings still required if connector does not expose them
+## Review checklist
 
-1. Open GitHub repository settings.
-2. Confirm visibility matches the final submission requirement.
-3. Confirm milestones listed above exist.
-4. Confirm issues are assigned to milestones.
-5. Confirm branch protection exists for `main` if supported.
-6. Confirm required checks include `build-test` and `package-lock` if supported.
+Before merge, verify:
 
-## Security note
+- scope matches the issue,
+- no credentials are committed,
+- no `.env` files are committed,
+- business rules are preserved,
+- backend remains the validation authority,
+- Google Sheets remains the visible log,
+- optional automation paths do not replace the primary Retell path,
+- tests and build pass,
+- CI is green,
+- documentation matches actual behavior.
 
-Do not store secrets, service account private keys, webhook secrets, API keys, or live credentials in issue comments, screenshots, README content, repository files, or Loom recordings.
+## Current issue map
+
+```text
+#1  Overall delivery coordination
+#2  Backend deployment and production environment
+#3  Google Sheets logging and write-path verification
+#4  Retell AI phone agent with ElevenLabs custom voice
+#5  n8n fallback workflow validation
+#6  Optional connector enhancement evaluation
+#7  QA acceptance matrix and live validation
+#8  Delivery evidence package
+#9  Optional interface evaluation
+#10 Repository finalization and deterministic install path
+```
+
+## Closure discipline
+
+Do not close issues based on configuration alone. Close only when the required evidence exists.
+
+Examples:
+
+- Voice-agent work is not complete until live calls are validated and Google Sheets rows are verified.
+- n8n fallback work is not complete until the runtime is configured, backend returns HTTP 201, and the Google Sheet row is verified.
+- Delivery evidence is not complete until screenshots or recordings are sanitized and reviewed for credential exposure.
