@@ -1,0 +1,140 @@
+{
+  "name": "Mama Tee - n8n Automation Bridge",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "mama-tees-automation-bridge-call-log",
+        "responseMode": "responseNode",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "automation-bridge-webhook",
+      "name": "Automation Bridge Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [0, 0],
+      "webhookId": "9b398c08-1a06-452b-a107-a30d140f630d"
+    },
+    {
+      "parameters": {
+        "jsCode": "const first = $input.first();\nconst incoming = first?.json ?? {};\nconst body = incoming.body && typeof incoming.body === 'object' && !Array.isArray(incoming.body) ? incoming.body : incoming;\n\nif (!body || typeof body !== 'object' || Array.isArray(body)) {\n  throw new Error('Invalid JSON payload.');\n}\n\nconst payload = { ...body };\n\nif (!payload.request_type || typeof payload.request_type !== 'string') {\n  throw new Error('Missing required request_type.');\n}\n\nif (!payload.source) {\n  payload.source = 'n8n_automation_bridge';\n}\n\nreturn [{ json: payload }];"
+      },
+      "id": "normalize-payload",
+      "name": "Normalize Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [224, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mama-tees-ai-concierge.vercel.app/api/call-logs",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Webhook-Secret",
+              "value": "={{ $env.MAMA_TEES_WEBHOOK_SECRET }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "id": "forward-to-vercel-backend",
+      "name": "Forward to Vercel Backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [448, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const first = $input.first();\nconst backend = first?.json ?? {};\nconst backendStatus = Number(backend.statusCode ?? backend.status ?? 502);\nconst success = backendStatus === 201;\n\nconst responseCode = success ? 201 : (backendStatus >= 400 && backendStatus <= 599 ? backendStatus : 502);\nconst responseBody = success\n  ? { status: 'success', message: 'Call log accepted by backend.', backend_status: backendStatus }\n  : { status: 'error', message: 'Call log forwarding failed.', backend_status: responseCode };\n\nreturn [{ json: { responseCode, responseBody } }];"
+      },
+      "id": "build-sanitized-response",
+      "name": "Build Sanitized Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [672, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.responseBody }}",
+        "options": {
+          "responseCode": "={{ $json.responseCode }}",
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "respond-to-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [896, 0]
+    },
+    {
+      "parameters": {
+        "content": "## Mama Tee - n8n Automation Bridge\nOptional workflow automation layer. Accepts a structured call-log JSON payload, forwards it to the production Vercel backend, and returns a sanitized response. The backend header reads from the Render runtime environment variable MAMA_TEES_WEBHOOK_SECRET. Do not paste the value into this workflow.",
+        "color": 3,
+        "width": 1196,
+        "height": 200
+      },
+      "id": "workflow-note",
+      "name": "Workflow Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-50, -50]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Automation Bridge Webhook": {
+      "main": [[{"node": "Normalize Payload", "type": "main", "index": 0}]]
+    },
+    "Normalize Payload": {
+      "main": [[{"node": "Forward to Vercel Backend", "type": "main", "index": 0}]]
+    },
+    "Forward to Vercel Backend": {
+      "main": [[{"node": "Build Sanitized Response", "type": "main", "index": 0}]]
+    },
+    "Build Sanitized Response": {
+      "main": [[{"node": "Respond to Webhook", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {"executionOrder": "v1"},
+  "versionId": "47640a03-39b8-4552-bfd5-1d5fa8a990dd",
+  "meta": {"templateCredsSetupCompleted": false},
+  "tags": []
+}

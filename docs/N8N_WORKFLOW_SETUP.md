@@ -2,103 +2,78 @@
 
 ## Purpose
 
-n8n is optional for this capstone. The primary path is:
+n8n is the optional workflow automation layer for Mama Tee's Kitchen AI Voice Concierge.
+
+The primary path remains:
 
 ```text
-Retell AI + ElevenLabs
-→ Node.js backend
-→ Google Sheets
+Retell AI phone agent
+-> ElevenLabs custom voice
+-> Vercel Node.js backend webhook
+-> Google Sheets visible call log
 ```
 
-Use n8n only as a fallback or extension after the backend path is stable:
+The n8n automation bridge path is:
 
 ```text
-Voice platform
-→ n8n webhook
-→ Google Sheets
+Voice platform or HTTP caller
+-> n8n Automation Bridge
+-> Vercel backend /api/call-logs
+-> Google Sheets visible call log
 ```
 
-## Workflow file
+The backend remains the authority for authentication, payload validation, delivery rules, reservation rules, confirmation summaries, sanitized errors, and the Google Sheets schema.
 
-Import this file into n8n:
+## Workflow files
+
+Current workflow export:
 
 ```text
-n8n/mama-tees-call-logger.workflow.json
+n8n/mama-tees-automation-bridge.workflow.json
 ```
 
-## Import steps
-
-1. Open n8n.
-2. Import workflow from file.
-3. Select `n8n/mama-tees-call-logger.workflow.json`.
-4. Open the Google Sheets node.
-5. Select or create your Google Sheets credential.
-6. Confirm document ID:
+Detailed setup and validation instructions:
 
 ```text
-1TYO9pj59qYfBeExiKLVYuvD9QB1jSFAhFb5rGBv4mB8
+docs/N8N_AUTOMATION_BRIDGE.md
 ```
 
-7. Confirm sheet name:
+Legacy direct-to-Google-Sheets workflow, if present, should not be used for the preferred automation bridge path. Direct spreadsheet writes bypass backend validation and duplicate responsibilities that belong in the backend.
+
+## Runtime configuration
+
+The Render-hosted n8n service must have:
 
 ```text
-Call Logs
+MAMA_TEES_WEBHOOK_SECRET=<same rotated value expected by Vercel backend>
+N8N_BLOCK_ENV_ACCESS_IN_NODE=false
 ```
 
-8. Save and activate the workflow.
-9. Copy the production webhook URL.
+The workflow sends the backend auth header from the Render runtime environment:
 
-## Security note
+```text
+X-Webhook-Secret: {{ $env.MAMA_TEES_WEBHOOK_SECRET }}
+```
 
-The imported workflow checks that `x-webhook-secret` is present. For stronger production security, update the workflow to compare the received header against a stored n8n credential or environment variable.
+Do not commit or display the value.
 
-Do not put secrets directly inside public workflow JSON.
+This project does not require n8n Enterprise Variables for this automation bridge. The current workflow uses Render runtime environment variables instead.
 
-## Test payload
+## Manual validation payload
 
-Send a test callback payload to the n8n production webhook URL:
+Use the validation payload documented in:
 
-```bash
-curl -X POST https://YOUR_N8N_WEBHOOK_URL \
-  -H "Content-Type: application/json" \
-  -H "x-webhook-secret: YOUR_SECRET" \
-  -d '{
-    "request_type": "callback",
-    "customer_name": "Demo Caller",
-    "phone_number": "08000000000",
-    "fulfillment_type": "not_applicable",
-    "callback_reason": "Testing n8n logging path.",
-    "confirmation_summary": "Callback request for Demo Caller."
-  }'
+```text
+docs/N8N_AUTOMATION_BRIDGE.md
 ```
 
 Expected result:
 
-```json
-{"status":"logged"}
-```
+- n8n execution succeeds,
+- backend returns HTTP 201,
+- Google Sheet receives a row with `source=n8n_automation_bridge`,
+- Google Sheet receives a row with `call_id=issue-5-n8n-automation-bridge-validation`.
 
-Then confirm a new row appears in Google Sheets.
+## Closure rule
 
-## Decision criteria
-
-Use backend primary if:
-
-- You want better validation.
-- You want business rules enforced before logging.
-- You want better engineering-grade evidence.
-
-Use n8n fallback if:
-
-- Deployment host setup is blocked.
-- You need a fast no-code route to Google Sheets.
-- The capstone deadline is close and the voice-agent tool can call n8n directly.
-
-## Documentation requirement
-
-If n8n is used in the Loom demo, capture screenshots of:
-
-- Webhook trigger.
-- Google Sheets node.
-- Successful execution.
-- Resulting Google Sheet row.
+Issue #5 should only close after the current automation bridge endpoint is validated, CI is green, PR review confirms no sensitive values are exposed, and the validated workflow/export/docs are merged.
