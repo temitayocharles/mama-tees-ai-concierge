@@ -1,63 +1,159 @@
 # Mama Tee's Kitchen AI Voice Concierge
 
-Capstone implementation package for **AI-Powered Business Concierge for Mama Tee's Kitchen**.
+AI-powered phone concierge built for Mama Tee's Kitchen by InfraForge.
 
-This repository provides a deployable webhook backend, restaurant knowledge base, voice-agent prompts, Google Sheets logging integration, validation rules, demo test cases, n8n fallback workflow, and submission documentation.
+The system gives the restaurant a practical, low-cost voice automation path for customer calls, order capture, reservation handling, callback requests, and visible operations logging. It is intentionally simple: a managed voice agent, a secure Node.js webhook backend, and Google Sheets as the business-visible call log.
 
-## Source of truth
+## Delivery context
 
-Start here before changing anything:
+Mama Tee's Kitchen needed a phone-first assistant that could reduce missed calls, answer common customer questions, collect structured requests, and give staff a visible call log without adding a database or heavy operational overhead.
 
-```text
-docs/CAPSTONE_BRIEF_REQUIREMENTS.md
-PROJECT_HANDOFF.md
-```
+The selected implementation prioritizes:
 
-`docs/CAPSTONE_BRIEF_REQUIREMENTS.md` extracts the project requirements from the uploaded capstone brief and maps them to repository files, acceptance tests, and submission evidence.
+- fast deployment,
+- low operating cost,
+- clear business-rule enforcement,
+- visible call-log review for staff,
+- secure webhook authentication,
+- minimal infrastructure burden,
+- a credible path to future production hardening.
 
-## Selected implementation direction
-
-Primary stack:
-
-```text
-Retell AI phone agent
-→ ElevenLabs custom voice
-→ Node.js backend webhook
-→ Google Sheets visible log
-```
-
-Optional fallback or extension:
-
-```text
-Voice platform
-→ n8n webhook
-→ Google Sheets visible log
-```
-
-Vapi is not required by the capstone brief. It remains a valid alternative, but this repository is now oriented around Retell plus ElevenLabs to create a differentiated submission without weakening the project.
-
-## What this project does
-
-The system supports a restaurant voice assistant that can:
-
-- Answer customer questions about menu, prices, hours, delivery, reservations, payment, catering, seating, halal status, pickup, and complaints.
-- Collect structured order requests.
-- Collect structured reservation requests.
-- Enforce delivery and reservation business rules.
-- Log orders, reservations, callbacks, complaints, catering requests, and general inquiries to Google Sheets or local JSONL.
-- Provide deterministic fallback behavior when a caller asks for something outside the supported scope.
-
-## Recommended architecture
+## Primary architecture
 
 ```text
 Customer phone call
   -> Retell AI phone agent using ElevenLabs custom voice
-  -> Agent uses prompts/voice-agent-system-prompt.md
-  -> Agent calls POST /api/call-logs after confirmed order/reservation/callback
-  -> Backend validates payload and business rules
-  -> Backend appends row to Google Sheet
-  -> Owner reviews visible call log
+  -> Vercel Node.js backend webhook
+  -> Google Sheets visible call log
 ```
+
+Optional fallback and extension path:
+
+```text
+Voice platform or HTTP caller
+  -> n8n webhook
+  -> Vercel backend /api/call-logs
+  -> Google Sheets visible call log
+```
+
+n8n is not the core production path. It is an optional integration layer and should forward to the backend rather than writing directly to Google Sheets. The backend remains the authority for authentication, payload validation, business rules, confirmation summaries, sanitized errors, and the Google Sheets schema.
+
+## What the system does
+
+The assistant supports restaurant operations by helping callers with:
+
+- menu, pricing, opening hours, delivery, pickup, reservations, payment, catering, seating, halal status, and complaint questions,
+- structured order requests,
+- structured reservation requests,
+- callback and complaint logging,
+- delivery-policy enforcement,
+- reservation-policy enforcement,
+- safe fallback when a request is outside the supported scope.
+
+The assistant must disclose that it is automated and must not invent menu items, prices, discounts, policies, or availability.
+
+## Business rules enforced
+
+Delivery:
+
+- Monday to Saturday only.
+- Delivery hours: 10:00am to 7:00pm.
+- No Sunday delivery.
+- Minimum delivery order: ₦3,000.
+- Payment before dispatch.
+
+Delivery fees:
+
+- Wuse 2, Maitama, Asokoro, Central Area: ₦500.
+- Garki, Utako, Jabi, Wuse 1: ₦800.
+- Gwarinpa, Lugbe, Kubwa, Karu, Nyanya: ₦1,200.
+
+Reservations:
+
+- Only for groups of 5 or more.
+- At least 24 hours notice required.
+- Reservation deposit: ₦5,000.
+- Deposit goes toward the bill.
+
+Specials:
+
+- Friday Catfish Pepper Soup with Agidi: ₦3,500, Fridays from 12pm until finished, no advance orders.
+- Sunday Family Meal Deal: ₦7,000.
+
+## Live production backend
+
+```text
+https://mama-tees-ai-concierge.vercel.app
+```
+
+Endpoints:
+
+```text
+GET  /healthz
+GET  /readiness
+POST /api/call-logs
+```
+
+Expected production readiness:
+
+```json
+{
+  "status": "ready",
+  "webhook_auth_configured": true,
+  "log_destination": "google_sheets",
+  "google_sheets_configured": true,
+  "google_sheets_auth_mode": "workload_identity",
+  "business_timezone": "Africa/Lagos"
+}
+```
+
+## Persistence model
+
+There is no application database.
+
+Google Sheets is the visible call-log persistence layer for this implementation.
+
+```text
+Title: Mama Tee's Kitchen Call Logs
+Spreadsheet ID: 1TYO9pj59qYfBeExiKLVYuvD9QB1jSFAhFb5rGBv4mB8
+Tab: Call Logs
+```
+
+Production Google authentication path:
+
+```text
+Vercel OIDC
+  -> Google Workload Identity Federation
+  -> service account impersonation
+  -> Google Sheets append
+```
+
+Do not use Google private keys for production.
+
+## Current voice-agent configuration
+
+Retell AI objects configured for the Mama Tee voice path:
+
+```text
+Retell LLM: llm_5bf4bf80d471d52a9de7f0aec4a8
+Retell Agent: agent_18dafa1d3bf6038320ad0be4a7
+Retell Voice: custom_voice_2078deacf9cdf5096ba2124a06
+Phone number: +1 (431) 500-6652
+```
+
+The live-call validation path still requires successful inbound test calls and verified Google Sheets rows before the voice path is treated as fully validated.
+
+## n8n status
+
+The n8n fallback package has been prepared and a live workflow was created, but the fallback path is not fully validated yet.
+
+Current known blockers before n8n can be considered complete:
+
+- required n8n runtime variable must be configured securely,
+- live n8n workflow must be updated or re-imported from the repository export,
+- manual execution must return backend HTTP 201,
+- Google Sheet row must be verified,
+- evidence must be captured without exposing credentials.
 
 ## Repository layout
 
@@ -65,79 +161,45 @@ Customer phone call
 .
 ├── .github/workflows/ci.yml
 ├── docs/
-│   ├── CAPSTONE_BRIEF_REQUIREMENTS.md
-│   ├── REPLIT_INTERFACE_CAVEATS.md
+│   ├── ARCHITECTURE.md
+│   ├── CLIENT_REQUIREMENTS.md
+│   ├── DEPLOYMENT.md
+│   ├── GOOGLE_SHEETS_SETUP.md
+│   ├── N8N_WORKFLOW_SETUP.md
+│   ├── QA_ACCEPTANCE_MATRIX.md
+│   ├── TEST_PLAN.md
 │   └── VOICE_AGENT_PLATFORM_SETUP.md
 ├── examples/
-│   ├── callback-log.json
-│   ├── order-log.json
-│   └── reservation-log.json
 ├── n8n/
-│   └── mama-tees-call-logger.workflow.json
 ├── prompts/
 │   ├── voice-agent-system-prompt.md
 │   └── voice-agent-tool-schema.md
 ├── scripts/
-│   ├── render-env-summary.sh
-│   ├── seed-google-sheet.ts
-│   └── test-api.sh
 ├── src/
-│   ├── app.ts
-│   ├── config.ts
-│   ├── domain/businessRules.ts
-│   ├── domain/knowledgeBase.ts
-│   ├── logger.ts
-│   ├── routes/callLogs.ts
-│   ├── routes/health.ts
-│   ├── server.ts
-│   ├── services/googleSheets.ts
-│   ├── services/logSink.ts
-│   └── types.ts
 └── tests/
-    ├── api.test.ts
-    └── businessRules.test.ts
 ```
 
-## Live setup completed
+## Local development
 
-A Google Sheet has already been created and seeded for the capstone demo.
-
-```text
-Title: Mama Tee's Kitchen Call Logs
-Spreadsheet ID: 1TYO9pj59qYfBeExiKLVYuvD9QB1jSFAhFb5rGBv4mB8
-Tab: Call Logs
-URL: https://docs.google.com/spreadsheets/d/1TYO9pj59qYfBeExiKLVYuvD9QB1jSFAhFb5rGBv4mB8/edit
-```
-
-The repository also includes an importable n8n workflow at:
-
-```text
-n8n/mama-tees-call-logger.workflow.json
-```
-
-## Quick start
-
-### 1. Install dependencies
+Install dependencies:
 
 ```bash
-npm install
+npm ci
 ```
 
-### 2. Create environment file
+Create a local environment file:
 
 ```bash
 cp .env.example .env
 ```
 
-For a fast local demo, leave:
+For local development without Google Sheets, use local JSON logging:
 
 ```bash
-LOG_DESTINATION=local_jsonl
+LOG_DESTINATION=local_json
 ```
 
-For final submission with Google Sheets logging, configure the Google service account values in `.env` or your deployment host secret manager.
-
-### 3. Run locally
+Run locally:
 
 ```bash
 npm run dev
@@ -149,7 +211,7 @@ Expected result:
 Mama Tee's Kitchen concierge API listening on port 8080
 ```
 
-### 4. Health check
+Health check:
 
 ```bash
 curl http://localhost:8080/healthz
@@ -161,52 +223,37 @@ Expected result:
 {"status":"ok"}
 ```
 
-### 5. Test API logging
+Run validation:
 
 ```bash
-WEBHOOK_SECRET=replace-with-a-long-random-secret ./scripts/test-api.sh
+npm ci
+npm run build
+npm test
 ```
 
-Expected result:
+Optional audit:
 
-```text
-Order log: HTTP 201
-Reservation log: HTTP 201
-Callback log: HTTP 201
+```bash
+npm audit --omit=dev
 ```
-
-If `LOG_DESTINATION=local_jsonl`, records are appended to:
-
-```text
-storage/call-logs.jsonl
-```
-
-## Deployment options
-
-Recommended capstone deployment path:
-
-1. Deploy backend to Render, Railway, Fly.io, or another Node.js host.
-2. Configure environment variables.
-3. Share the Google Sheet with the Google service account.
-4. Configure Retell AI agent tool/webhook to call `POST /api/call-logs`.
-5. Configure ElevenLabs custom voice in the selected voice platform.
-6. Test order, reservation, invalid reservation, Sunday delivery, and callback flows.
-7. Record Loom demo with live call and visible Google Sheet update.
 
 ## Security notes
 
-- Do not commit `.env` or service account credentials.
+- Do not commit `.env` files.
+- Do not hard-code webhook values, API keys, Google credentials, Retell credentials, ElevenLabs credentials, or Vercel environment values.
 - Use `WEBHOOK_SECRET` and require the voice platform to send it in the `X-Webhook-Secret` header.
-- Share the Google Sheet only with the service account email and required human reviewers.
+- Keep Google production authentication on Workload Identity Federation.
 - Restrict service account permissions to the target spreadsheet.
-- Rotate secrets after the demo if they were displayed during screen recording.
+- Do not expose credentials in screenshots, recordings, pull requests, issue comments, transcripts, or documentation.
+- Rotate any credential that is accidentally exposed.
 
-## Required submission assets
+## Delivery evidence still required
 
-The capstone requires:
+Before this project should be presented as fully live-validated, capture evidence for:
 
-- Loom video link showing live call test and backend log.
-- Screenshots of the build.
-- Both must be submitted together.
-
-Use `docs/CAPSTONE_BRIEF_REQUIREMENTS.md` for the acceptance test matrix and `PROJECT_HANDOFF.md` for current project state.
+- backend readiness,
+- Retell phone number routing,
+- inbound call behavior,
+- successful call-log write to Google Sheets,
+- invalid delivery and reservation rule handling,
+- optional n8n fallback execution after runtime configuration is complete.
