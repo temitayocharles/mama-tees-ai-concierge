@@ -4,7 +4,7 @@
 
 Mama Tee's Kitchen contracted InfraForge to deliver a practical phone-based AI concierge that can answer common restaurant questions, collect structured customer requests, and write visible call logs for staff review.
 
-The implementation uses a deliberately lean architecture: Retell AI for phone calls, ElevenLabs for the custom voice, a Vercel-hosted Node.js backend for authentication and validation, and Google Sheets as the visible operations log.
+The implementation uses a deliberately lean architecture: Retell AI for phone calls, ElevenLabs for the custom voice, a Vercel-hosted Node.js backend for authentication and validation, n8n as a workflow automation bridge, and Google Sheets as the visible operations log.
 
 ## Current production backend
 
@@ -29,16 +29,16 @@ Retell AI phone agent
   -> Google Sheets visible call log
 ```
 
-## Optional fallback path
+## n8n automation bridge path
 
 ```text
 Voice platform or HTTP caller
-  -> n8n webhook
+  -> n8n Automation Bridge
   -> Vercel backend /api/call-logs
   -> Google Sheets visible call log
 ```
 
-n8n must remain optional. It should forward to the backend and must not become the system of record.
+n8n is an automation layer. It forwards to the backend and does not become the system of record.
 
 ## Persistence decision
 
@@ -83,21 +83,30 @@ Inbound number attached: yes
 Google Sheet Retell live-call row verification: pending
 ```
 
-## n8n state
+## n8n Automation Bridge state
 
-n8n work is prepared but not fully complete.
-
-Known current status:
+The n8n Automation Bridge is active and validated.
 
 ```text
-Repository workflow export: prepared
-Live n8n workflow: created
-Runtime configuration: pending
-Manual backend HTTP 201 validation: pending
-Google Sheet row verification: pending
+Workflow name: Mama Tee - n8n Automation Bridge
+Workflow ID: FpRh13SdgO1NmEEe
+Active version: 47640a03-39b8-4552-bfd5-1d5fa8a990dd
+Production webhook: https://n8n-uev8.onrender.com/webhook/mama-tees-automation-bridge-call-log
+Backend validation through n8n: HTTP 201
+Google Sheet row verification: complete
+Verified call_id: issue-5-n8n-automation-bridge-validation
+Verified source: n8n_automation_bridge
 ```
 
-Do not mark the n8n path complete until the runtime configuration is complete, a manual execution returns HTTP 201, and the Google Sheet row is verified.
+## Demo script
+
+Use the screen-by-screen recording script at:
+
+```text
+docs/CLIENT_DEMO_SCRIPT.md
+```
+
+It contains tab setup, click paths, narration, live-call prompts, n8n validation command, and Google Sheets evidence checks.
 
 ## Business rules that must remain unchanged
 
@@ -133,8 +142,7 @@ Specials:
 2. Place live inbound calls through `+1 (431) 500-6652`.
 3. Verify Google Sheets rows from Retell calls.
 4. Capture sanitized evidence.
-5. Finish n8n runtime configuration and validation.
-6. Keep documentation aligned with the client-delivery narrative.
+5. Keep documentation aligned with the client-delivery narrative.
 
 ## Security rules
 

@@ -2,7 +2,7 @@
 
 AI-powered phone concierge built for Mama Tee's Kitchen by InfraForge.
 
-The system gives the restaurant a practical, low-cost voice automation path for customer calls, order capture, reservation handling, callback requests, and visible operations logging. It is intentionally simple: a managed voice agent, a secure Node.js webhook backend, and Google Sheets as the business-visible call log.
+The system gives the restaurant a practical, low-cost voice automation path for customer calls, order capture, reservation handling, callback requests, and visible operations logging. It is intentionally simple: a managed voice agent, a secure Node.js webhook backend, an n8n workflow automation bridge, and Google Sheets as the business-visible call log.
 
 ## Delivery context
 
@@ -27,16 +27,16 @@ Customer phone call
   -> Google Sheets visible call log
 ```
 
-Optional fallback and extension path:
+## Workflow automation bridge
 
 ```text
 Voice platform or HTTP caller
-  -> n8n webhook
+  -> n8n Automation Bridge
   -> Vercel backend /api/call-logs
   -> Google Sheets visible call log
 ```
 
-n8n is not the core production path. It is an optional integration layer and should forward to the backend rather than writing directly to Google Sheets. The backend remains the authority for authentication, payload validation, business rules, confirmation summaries, sanitized errors, and the Google Sheets schema.
+n8n is the workflow automation bridge for structured intake paths. It does not write directly to Google Sheets. It forwards to the backend so authentication, validation, business rules, confirmation summaries, sanitized errors, and spreadsheet schema ownership remain centralized.
 
 ## What the system does
 
@@ -48,7 +48,7 @@ The assistant supports restaurant operations by helping callers with:
 - callback and complaint logging,
 - delivery-policy enforcement,
 - reservation-policy enforcement,
-- safe fallback when a request is outside the supported scope.
+- safe escalation when a request is outside the supported scope.
 
 The assistant must disclose that it is automated and must not invent menu items, prices, discounts, policies, or availability.
 
@@ -143,17 +143,30 @@ Phone number: +1 (431) 500-6652
 
 The live-call validation path still requires successful inbound test calls and verified Google Sheets rows before the voice path is treated as fully validated.
 
-## n8n status
+## n8n Automation Bridge status
 
-The n8n fallback package has been prepared and a live workflow was created, but the fallback path is not fully validated yet.
+The n8n Automation Bridge is active and validated.
 
-Current known blockers before n8n can be considered complete:
+```text
+Workflow name: Mama Tee - n8n Automation Bridge
+Workflow ID: FpRh13SdgO1NmEEe
+Production webhook: https://n8n-uev8.onrender.com/webhook/mama-tees-automation-bridge-call-log
+Backend result through n8n: HTTP 201
+Google Sheet row verified: true
+Verified call_id: issue-5-n8n-automation-bridge-validation
+```
 
-- required n8n runtime variable must be configured securely,
-- live n8n workflow must be updated or re-imported from the repository export,
-- manual execution must return backend HTTP 201,
-- Google Sheet row must be verified,
-- evidence must be captured without exposing credentials.
+The workflow uses Render runtime configuration for the backend webhook value and does not store the value in the workflow export or documentation.
+
+## Demo script
+
+The video runbook is maintained at:
+
+```text
+docs/CLIENT_DEMO_SCRIPT.md
+```
+
+It includes screen-by-screen instructions, click paths, narration, safe validation commands, and evidence checks.
 
 ## Repository layout
 
@@ -162,6 +175,7 @@ Current known blockers before n8n can be considered complete:
 ├── .github/workflows/ci.yml
 ├── docs/
 │   ├── ARCHITECTURE.md
+│   ├── CLIENT_DEMO_SCRIPT.md
 │   ├── CLIENT_REQUIREMENTS.md
 │   ├── DEPLOYMENT.md
 │   ├── GOOGLE_SHEETS_SETUP.md
@@ -241,7 +255,7 @@ npm audit --omit=dev
 
 - Do not commit `.env` files.
 - Do not hard-code webhook values, API keys, Google credentials, Retell credentials, ElevenLabs credentials, or Vercel environment values.
-- Use `WEBHOOK_SECRET` and require the voice platform to send it in the `X-Webhook-Secret` header.
+- Use `WEBHOOK_SECRET` and require the voice platform or automation bridge to send it in the `X-Webhook-Secret` header.
 - Keep Google production authentication on Workload Identity Federation.
 - Restrict service account permissions to the target spreadsheet.
 - Do not expose credentials in screenshots, recordings, pull requests, issue comments, transcripts, or documentation.
@@ -249,11 +263,12 @@ npm audit --omit=dev
 
 ## Delivery evidence still required
 
-Before this project should be presented as fully live-validated, capture evidence for:
+Before the voice path is presented as fully live-validated, capture evidence for:
 
 - backend readiness,
 - Retell phone number routing,
-- inbound call behavior,
-- successful call-log write to Google Sheets,
-- invalid delivery and reservation rule handling,
-- optional n8n fallback execution after runtime configuration is complete.
+- inbound Retell call behavior,
+- successful Retell call-log write to Google Sheets,
+- invalid delivery and reservation rule handling.
+
+The n8n Automation Bridge has already been validated with backend HTTP 201 and a verified Google Sheet row.
