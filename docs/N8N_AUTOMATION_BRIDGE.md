@@ -1,8 +1,12 @@
-# n8n Fallback Workflow
+# n8n Automation Bridge
 
 ## Purpose
 
-This workflow is optional fallback and automation infrastructure for Mama Tee's Kitchen AI Voice Concierge. It must not replace the primary voice path:
+The n8n Automation Bridge is an optional workflow automation layer for Mama Tee's Kitchen AI Voice Concierge.
+
+It provides an automation-friendly intake path for structured call-log payloads while preserving the secure backend as the authority for authentication, validation, business rules, sanitized errors, and Google Sheets schema control.
+
+Primary voice path:
 
 ```text
 Retell AI phone agent
@@ -11,27 +15,27 @@ Retell AI phone agent
 -> Google Sheets visible call log
 ```
 
-The n8n fallback path forwards to the same backend instead of writing directly to Google Sheets:
+Automation bridge path:
 
 ```text
 Voice platform or HTTP caller
--> n8n webhook
+-> n8n Automation Bridge
 -> Vercel backend /api/call-logs
 -> Google Sheets visible call log
 ```
 
-The backend remains the authority for authentication, payload validation, delivery rules, reservation rules, confirmation summaries, sanitized errors, and the Google Sheets schema.
+n8n does not write directly to Google Sheets. It forwards to the backend.
 
 ## Workflow file
 
 ```text
-n8n/mama-tees-fallback-call-log.workflow.json
+n8n/mama-tees-automation-bridge.workflow.json
 ```
 
 Workflow name:
 
 ```text
-Mama Tee - Fallback Call Log Webhook
+Mama Tee - n8n Automation Bridge
 ```
 
 Live workflow ID:
@@ -43,7 +47,7 @@ FpRh13SdgO1NmEEe
 Production webhook:
 
 ```text
-https://n8n-uev8.onrender.com/webhook/mama-tees-fallback-call-log
+https://n8n-uev8.onrender.com/webhook/mama-tees-automation-bridge-call-log
 ```
 
 ## Backend target
@@ -91,12 +95,12 @@ Restrict access to the n8n instance to trusted operators because workflow nodes 
 ```json
 {
   "request_type": "callback",
-  "customer_name": "n8n Validation",
+  "customer_name": "n8n Automation Bridge Validation",
   "phone_number": "08000000000",
-  "callback_reason": "Validate n8n fallback webhook to production backend",
-  "notes": "Safe validation row for issue #5 after Render env var mapping",
-  "source": "n8n_fallback",
-  "call_id": "issue-5-n8n-fallback-validation"
+  "callback_reason": "Validate n8n automation bridge webhook to production backend",
+  "notes": "Safe validation row for issue #5 after automation bridge rename",
+  "source": "n8n_automation_bridge",
+  "call_id": "issue-5-n8n-automation-bridge-validation"
 }
 ```
 
@@ -114,27 +118,22 @@ Expected Google Sheet row fields:
 
 ```text
 request_type=callback
-customer_name=n8n Validation
-source=n8n_fallback
-call_id=issue-5-n8n-fallback-validation
+customer_name=n8n Automation Bridge Validation
+source=n8n_automation_bridge
+call_id=issue-5-n8n-automation-bridge-validation
 ```
 
-## Validation evidence
+## Prior validation evidence
 
-Validated on 2026-05-21:
+The previous validated endpoint returned HTTP 201 and wrote a Google Sheet row before the naming cleanup.
+
+Validated prior call ID:
 
 ```text
-Workflow ID: FpRh13SdgO1NmEEe
-Active version: 6cedc0d9-a2f4-477e-955a-c7353af42a48
-Production webhook response: HTTP 201
-backend_status: 201
-Google Sheet row found: true
-Google Sheet timestamp: 2026-05-21T17:11:33.925Z
-source: n8n_fallback
-call_id: issue-5-n8n-fallback-validation
+issue-5-n8n-fallback-validation
 ```
 
-A previous failed validation returned HTTP 401 when the workflow referenced n8n `$vars` or when environment access was blocked. The successful configuration uses Render runtime `$env` access with `N8N_BLOCK_ENV_ACCESS_IN_NODE=false`.
+The current automation bridge endpoint must be revalidated after the rename before issue #5 is merged as complete.
 
 ## Failure behavior
 
@@ -149,13 +148,3 @@ Expected sanitized failure shape:
   "backend_status": 401
 }
 ```
-
-## Closure status
-
-Issue #5 can be resolved after CI is green and PR review confirms:
-
-- workflow export matches the live n8n configuration,
-- Render runtime configuration is documented without exposing values,
-- production execution returns backend HTTP 201,
-- Google Sheet row is verified,
-- no secret value appears in the repository, screenshots, issue comments, or pull request text.

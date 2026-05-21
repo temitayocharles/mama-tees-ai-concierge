@@ -2,7 +2,7 @@
 
 ## Purpose
 
-n8n is optional automation infrastructure for Mama Tee's Kitchen AI Voice Concierge.
+n8n is the optional workflow automation layer for Mama Tee's Kitchen AI Voice Concierge.
 
 The primary path remains:
 
@@ -13,13 +13,11 @@ Retell AI phone agent
 -> Google Sheets visible call log
 ```
 
-Use n8n only as a fallback or extension after the backend path is stable.
-
-## Preferred fallback design
+The n8n automation bridge path is:
 
 ```text
 Voice platform or HTTP caller
--> n8n webhook
+-> n8n Automation Bridge
 -> Vercel backend /api/call-logs
 -> Google Sheets visible call log
 ```
@@ -28,19 +26,19 @@ The backend remains the authority for authentication, payload validation, delive
 
 ## Workflow files
 
-Current fallback workflow export:
+Current workflow export:
 
 ```text
-n8n/mama-tees-fallback-call-log.workflow.json
+n8n/mama-tees-automation-bridge.workflow.json
 ```
 
 Detailed setup and validation instructions:
 
 ```text
-docs/N8N_FALLBACK_WORKFLOW.md
+docs/N8N_AUTOMATION_BRIDGE.md
 ```
 
-Legacy direct-to-Google-Sheets workflow, if present, should not be used for the preferred fallback path. Direct spreadsheet writes bypass backend validation and duplicate responsibilities that belong in the backend.
+Legacy direct-to-Google-Sheets workflow, if present, should not be used for the preferred automation bridge path. Direct spreadsheet writes bypass backend validation and duplicate responsibilities that belong in the backend.
 
 ## Runtime configuration
 
@@ -59,36 +57,23 @@ X-Webhook-Secret: {{ $env.MAMA_TEES_WEBHOOK_SECRET }}
 
 Do not commit or display the value.
 
-This project does not require n8n Enterprise Variables for the fallback path. The current workflow uses Render runtime environment variables instead.
+This project does not require n8n Enterprise Variables for this automation bridge. The current workflow uses Render runtime environment variables instead.
 
 ## Manual validation payload
 
 Use the validation payload documented in:
 
 ```text
-docs/N8N_FALLBACK_WORKFLOW.md
+docs/N8N_AUTOMATION_BRIDGE.md
 ```
 
 Expected result:
 
 - n8n execution succeeds,
 - backend returns HTTP 201,
-- Google Sheet receives a row with `source=n8n_fallback`,
-- Google Sheet receives a row with `call_id=issue-5-n8n-fallback-validation`.
-
-## Validation status
-
-Validated on 2026-05-21:
-
-```text
-Workflow ID: FpRh13SdgO1NmEEe
-Active version: 6cedc0d9-a2f4-477e-955a-c7353af42a48
-Production webhook response: HTTP 201
-backend_status: 201
-Google Sheet row found: true
-call_id: issue-5-n8n-fallback-validation
-```
+- Google Sheet receives a row with `source=n8n_automation_bridge`,
+- Google Sheet receives a row with `call_id=issue-5-n8n-automation-bridge-validation`.
 
 ## Closure rule
 
-Issue #5 should only close after CI is green, PR review confirms no sensitive values are exposed, and the validated workflow/export/docs are merged.
+Issue #5 should only close after the current automation bridge endpoint is validated, CI is green, PR review confirms no sensitive values are exposed, and the validated workflow/export/docs are merged.

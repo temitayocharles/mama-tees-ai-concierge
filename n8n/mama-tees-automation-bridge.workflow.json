@@ -1,10 +1,10 @@
 {
-  "name": "Mama Tee - Fallback Call Log Webhook",
+  "name": "Mama Tee - n8n Automation Bridge",
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "mama-tees-fallback-call-log",
+        "path": "mama-tees-automation-bridge-call-log",
         "responseMode": "responseNode",
         "options": {
           "responseHeaders": {
@@ -17,28 +17,22 @@
           }
         }
       },
-      "id": "fallback-call-log-webhook",
-      "name": "Fallback Call Log Webhook",
+      "id": "automation-bridge-webhook",
+      "name": "Automation Bridge Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
-      "position": [
-        0,
-        0
-      ],
+      "position": [0, 0],
       "webhookId": "9b398c08-1a06-452b-a107-a30d140f630d"
     },
     {
       "parameters": {
-        "jsCode": "const first = $input.first();\nconst incoming = first?.json ?? {};\nconst body = incoming.body && typeof incoming.body === 'object' && !Array.isArray(incoming.body) ? incoming.body : incoming;\n\nif (!body || typeof body !== 'object' || Array.isArray(body)) {\n  throw new Error('Invalid JSON payload.');\n}\n\nconst payload = { ...body };\n\nif (!payload.request_type || typeof payload.request_type !== 'string') {\n  throw new Error('Missing required request_type.');\n}\n\nif (!payload.source) {\n  payload.source = 'n8n_fallback';\n}\n\nreturn [{ json: payload }];"
+        "jsCode": "const first = $input.first();\nconst incoming = first?.json ?? {};\nconst body = incoming.body && typeof incoming.body === 'object' && !Array.isArray(incoming.body) ? incoming.body : incoming;\n\nif (!body || typeof body !== 'object' || Array.isArray(body)) {\n  throw new Error('Invalid JSON payload.');\n}\n\nconst payload = { ...body };\n\nif (!payload.request_type || typeof payload.request_type !== 'string') {\n  throw new Error('Missing required request_type.');\n}\n\nif (!payload.source) {\n  payload.source = 'n8n_automation_bridge';\n}\n\nreturn [{ json: payload }];"
       },
       "id": "normalize-payload",
       "name": "Normalize Payload",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        224,
-        0
-      ]
+      "position": [224, 0]
     },
     {
       "parameters": {
@@ -75,10 +69,7 @@
       "name": "Forward to Vercel Backend",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
-      "position": [
-        448,
-        0
-      ]
+      "position": [448, 0]
     },
     {
       "parameters": {
@@ -88,10 +79,7 @@
       "name": "Build Sanitized Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        672,
-        0
-      ]
+      "position": [672, 0]
     },
     {
       "parameters": {
@@ -113,14 +101,11 @@
       "name": "Respond to Webhook",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
-      "position": [
-        896,
-        0
-      ]
+      "position": [896, 0]
     },
     {
       "parameters": {
-        "content": "## Mama Tee - Fallback Call Log Webhook\nOptional fallback workflow. Accepts a call-log JSON payload, forwards it to the production Vercel backend, and returns a sanitized response. The backend header reads from the Render runtime environment variable MAMA_TEES_WEBHOOK_SECRET. Do not paste the value into this workflow.",
+        "content": "## Mama Tee - n8n Automation Bridge\nOptional workflow automation layer. Accepts a structured call-log JSON payload, forwards it to the production Vercel backend, and returns a sanitized response. The backend header reads from the Render runtime environment variable MAMA_TEES_WEBHOOK_SECRET. Do not paste the value into this workflow.",
         "color": 3,
         "width": 1196,
         "height": 200
@@ -129,66 +114,27 @@
       "name": "Workflow Note",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [
-        -50,
-        -50
-      ]
+      "position": [-50, -50]
     }
   ],
   "pinData": {},
   "connections": {
-    "Fallback Call Log Webhook": {
-      "main": [
-        [
-          {
-            "node": "Normalize Payload",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+    "Automation Bridge Webhook": {
+      "main": [[{"node": "Normalize Payload", "type": "main", "index": 0}]]
     },
     "Normalize Payload": {
-      "main": [
-        [
-          {
-            "node": "Forward to Vercel Backend",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Forward to Vercel Backend", "type": "main", "index": 0}]]
     },
     "Forward to Vercel Backend": {
-      "main": [
-        [
-          {
-            "node": "Build Sanitized Response",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Build Sanitized Response", "type": "main", "index": 0}]]
     },
     "Build Sanitized Response": {
-      "main": [
-        [
-          {
-            "node": "Respond to Webhook",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Respond to Webhook", "type": "main", "index": 0}]]
     }
   },
   "active": false,
-  "settings": {
-    "executionOrder": "v1"
-  },
-  "versionId": "6cedc0d9-a2f4-477e-955a-c7353af42a48",
-  "meta": {
-    "templateCredsSetupCompleted": false
-  },
+  "settings": {"executionOrder": "v1"},
+  "versionId": "47640a03-39b8-4552-bfd5-1d5fa8a990dd",
+  "meta": {"templateCredsSetupCompleted": false},
   "tags": []
 }
