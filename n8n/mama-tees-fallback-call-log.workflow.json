@@ -25,20 +25,18 @@
         0,
         0
       ],
-      "webhookId": "04f3ff33-4fe7-4456-88c2-9ace73062af9"
+      "webhookId": "9b398c08-1a06-452b-a107-a30d140f630d"
     },
     {
       "parameters": {
-        "mode": "runOnceForAllItems",
-        "language": "javaScript",
-        "jsCode": "const first = $input.first();\nconst incoming = first?.json ?? {};\nconst body = incoming.body && typeof incoming.body === 'object' && !Array.isArray(incoming.body) ? incoming.body : incoming;\n\nconst payload = body && typeof body === 'object' && !Array.isArray(body) ? { ...body } : {};\n\nif (!payload.source) {\n  payload.source = 'n8n_fallback';\n}\n\nreturn [{ json: { payload } }];"
+        "jsCode": "const first = $input.first();\nconst incoming = first?.json ?? {};\nconst body = incoming.body && typeof incoming.body === 'object' && !Array.isArray(incoming.body) ? incoming.body : incoming;\n\nif (!body || typeof body !== 'object' || Array.isArray(body)) {\n  throw new Error('Invalid JSON payload.');\n}\n\nconst payload = { ...body };\n\nif (!payload.request_type || typeof payload.request_type !== 'string') {\n  throw new Error('Missing required request_type.');\n}\n\nif (!payload.source) {\n  payload.source = 'n8n_fallback';\n}\n\nreturn [{ json: payload }];"
       },
       "id": "normalize-payload",
       "name": "Normalize Payload",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        260,
+        224,
         0
       ]
     },
@@ -46,9 +44,7 @@
       "parameters": {
         "method": "POST",
         "url": "https://mama-tees-ai-concierge.vercel.app/api/call-logs",
-        "authentication": "none",
         "sendHeaders": true,
-        "specifyHeaders": "keypair",
         "headerParameters": {
           "parameters": [
             {
@@ -57,23 +53,22 @@
             },
             {
               "name": "X-Webhook-Secret",
-              "value": "={{ $vars.MAMA_TEES_WEBHOOK_SECRET }}"
+              "value": "={{ $env.MAMA_TEES_WEBHOOK_SECRET }}"
             }
           ]
         },
         "sendBody": true,
-        "contentType": "json",
         "specifyBody": "json",
-        "jsonBody": "={{ $json.payload }}",
+        "jsonBody": "={{ $json }}",
         "options": {
-          "timeout": 10000,
           "response": {
             "response": {
               "fullResponse": true,
               "neverError": true,
               "responseFormat": "json"
             }
-          }
+          },
+          "timeout": 10000
         }
       },
       "id": "forward-to-vercel-backend",
@@ -81,14 +76,12 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        540,
+        448,
         0
       ]
     },
     {
       "parameters": {
-        "mode": "runOnceForAllItems",
-        "language": "javaScript",
         "jsCode": "const first = $input.first();\nconst backend = first?.json ?? {};\nconst backendStatus = Number(backend.statusCode ?? backend.status ?? 502);\nconst success = backendStatus === 201;\n\nconst responseCode = success ? 201 : (backendStatus >= 400 && backendStatus <= 599 ? backendStatus : 502);\nconst responseBody = success\n  ? { status: 'success', message: 'Call log accepted by backend.', backend_status: backendStatus }\n  : { status: 'error', message: 'Call log forwarding failed.', backend_status: responseCode };\n\nreturn [{ json: { responseCode, responseBody } }];"
       },
       "id": "build-sanitized-response",
@@ -96,7 +89,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        820,
+        672,
         0
       ]
     },
@@ -121,24 +114,24 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
-        1100,
+        896,
         0
       ]
     },
     {
       "parameters": {
-        "content": "## Mama Tee - Fallback Call Log Webhook\nOptional fallback workflow. Accepts call-log JSON, forwards it to the production Vercel backend, and returns a sanitized response. Configure the n8n variable MAMA_TEES_WEBHOOK_SECRET securely before testing. Do not paste the value into this workflow.",
+        "content": "## Mama Tee - Fallback Call Log Webhook\nOptional fallback workflow. Accepts a call-log JSON payload, forwards it to the production Vercel backend, and returns a sanitized response. The backend header reads from the Render runtime environment variable MAMA_TEES_WEBHOOK_SECRET. Do not paste the value into this workflow.",
         "color": 3,
-        "width": 1240,
-        "height": 180
+        "width": 1196,
+        "height": 200
       },
       "id": "workflow-note",
       "name": "Workflow Note",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        260,
-        160
+        -50,
+        -50
       ]
     }
   ],
@@ -193,7 +186,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "58b0c2e9-7baf-491f-a4d2-29108cb6047a",
+  "versionId": "6cedc0d9-a2f4-477e-955a-c7353af42a48",
   "meta": {
     "templateCredsSetupCompleted": false
   },

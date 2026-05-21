@@ -2,7 +2,9 @@
 
 ## Purpose
 
-n8n is optional for this capstone. The primary path remains:
+n8n is optional automation infrastructure for Mama Tee's Kitchen AI Voice Concierge.
+
+The primary path remains:
 
 ```text
 Retell AI phone agent
@@ -15,8 +17,6 @@ Use n8n only as a fallback or extension after the backend path is stable.
 
 ## Preferred fallback design
 
-Use this design for issue #5:
-
 ```text
 Voice platform or HTTP caller
 -> n8n webhook
@@ -24,11 +24,11 @@ Voice platform or HTTP caller
 -> Google Sheets visible call log
 ```
 
-The backend must remain the authority for authentication, payload validation, delivery rules, reservation rules, confirmation summaries, sanitized errors, and the Google Sheets schema.
+The backend remains the authority for authentication, payload validation, delivery rules, reservation rules, confirmation summaries, sanitized errors, and the Google Sheets schema.
 
 ## Workflow files
 
-Preferred issue #5 workflow:
+Current fallback workflow export:
 
 ```text
 n8n/mama-tees-fallback-call-log.workflow.json
@@ -40,29 +40,26 @@ Detailed setup and validation instructions:
 docs/N8N_FALLBACK_WORKFLOW.md
 ```
 
-Legacy direct-to-Google-Sheets workflow retained for reference:
+Legacy direct-to-Google-Sheets workflow, if present, should not be used for the preferred fallback path. Direct spreadsheet writes bypass backend validation and duplicate responsibilities that belong in the backend.
+
+## Runtime configuration
+
+The Render-hosted n8n service must have:
 
 ```text
-n8n/mama-tees-call-logger.workflow.json
+MAMA_TEES_WEBHOOK_SECRET=<same rotated value expected by Vercel backend>
+N8N_BLOCK_ENV_ACCESS_IN_NODE=false
 ```
 
-Do not use the legacy direct-to-Google-Sheets workflow for the core capstone demo unless explicitly instructed. It bypasses backend validation and duplicates responsibilities that already exist in the stable backend path.
-
-## Required n8n variable
-
-Configure the backend webhook value securely in n8n:
+The workflow sends the backend auth header from the Render runtime environment:
 
 ```text
-MAMA_TEES_WEBHOOK_SECRET
-```
-
-The workflow sends it as:
-
-```text
-X-Webhook-Secret: <configured securely in n8n only>
+X-Webhook-Secret: {{ $env.MAMA_TEES_WEBHOOK_SECRET }}
 ```
 
 Do not commit or display the value.
+
+This project does not require n8n Enterprise Variables for the fallback path. The current workflow uses Render runtime environment variables instead.
 
 ## Manual validation payload
 
@@ -74,10 +71,24 @@ docs/N8N_FALLBACK_WORKFLOW.md
 
 Expected result:
 
-- n8n execution succeeds.
-- Backend returns HTTP 201.
-- Google Sheet receives a row with `source=n8n_fallback` and `call_id=issue-5-n8n-fallback-validation`.
+- n8n execution succeeds,
+- backend returns HTTP 201,
+- Google Sheet receives a row with `source=n8n_fallback`,
+- Google Sheet receives a row with `call_id=issue-5-n8n-fallback-validation`.
+
+## Validation status
+
+Validated on 2026-05-21:
+
+```text
+Workflow ID: FpRh13SdgO1NmEEe
+Active version: 6cedc0d9-a2f4-477e-955a-c7353af42a48
+Production webhook response: HTTP 201
+backend_status: 201
+Google Sheet row found: true
+call_id: issue-5-n8n-fallback-validation
+```
 
 ## Closure rule
 
-Do not close issue #5 until the workflow is imported or updated in n8n, the n8n variable is configured securely, a manual execution succeeds, the Google Sheet row is verified, evidence is captured without sensitive values, documentation is updated, and CI is green.
+Issue #5 should only close after CI is green, PR review confirms no sensitive values are exposed, and the validated workflow/export/docs are merged.
