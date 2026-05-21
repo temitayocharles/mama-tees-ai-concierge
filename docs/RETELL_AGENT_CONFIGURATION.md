@@ -51,11 +51,52 @@ Agent channel:
 voice
 ```
 
-Agent status at setup time:
+## Retell phone number routing
+
+Assigned Retell phone number:
 
 ```text
-created as draft / not published
++1 (431) 500-6652
 ```
+
+Phone number ID / E.164 value:
+
+```text
++14315006652
+```
+
+Provider:
+
+```text
+Retell Twilio
+```
+
+Inbound routing:
+
+```text
+Inbound agent: agent_18dafa1d3bf6038320ad0be4a7
+Inbound allowed countries: CA, US, NG
+```
+
+Outbound routing:
+
+```text
+Outbound agent: agent_18dafa1d3bf6038320ad0be4a7
+Outbound agent version: 0
+Outbound allowed countries: CA, US
+```
+
+SMS is not enabled for this number.
+
+
+Agent publication state after issue #4 progress validation:
+
+```text
+Published version: 0
+Current draft version: 1
+```
+
+Retell creates a new draft after publishing. The phone number is attached to the published agent path for live calls.
 
 ## ElevenLabs voice imported into Retell
 
@@ -186,10 +227,10 @@ The tool is configured to be called only after the caller confirms an order, res
 
 ## Current blockers before issue #4 can close
 
-1. Retell account currently has no phone numbers assigned.
-2. The rotated `X-Webhook-Secret` must be configured inside Retell for the `log_call_request` tool without exposing the value in GitHub, chat, screenshots, or Loom.
-3. The agent remains unpublished until the authentication header and phone number are ready.
-4. End-to-end Retell phone tests are still pending.
+1. Confirm the Retell `log_call_request` tool sends the current `X-Webhook-Secret` request header without exposing the value in GitHub, chat, screenshots, or Loom. The API confirms the endpoint URL, but it does not expose the configured header value.
+2. Run end-to-end Retell phone tests through the assigned number.
+3. Confirm new rows appear in the `Call Logs` Google Sheet from Retell calls.
+4. Capture execution evidence without exposing secrets, credentials, account security pages, billing pages, or raw environment values.
 
 ## Required manual Retell dashboard steps
 
@@ -200,9 +241,9 @@ The tool is configured to be called only after the caller confirms an order, res
 5. Open the `log_call_request` tool.
 6. Configure the rotated webhook secret as the `X-Webhook-Secret` request header, if the Retell dashboard exposes custom headers for tools.
 7. If the dashboard does not expose custom tool headers, do not place the secret in the prompt or in a body field. Use a secure backend-compatible authentication design change instead.
-8. Assign or purchase a Retell phone number.
-9. Attach the phone number to the agent.
-10. Publish the agent.
+8. Confirm the assigned Retell phone number is `+1 (431) 500-6652`.
+9. Confirm the phone number is attached to `agent_18dafa1d3bf6038320ad0be4a7`.
+10. Confirm published version `0` remains the live phone-call target.
 
 ## Required test calls before closure
 

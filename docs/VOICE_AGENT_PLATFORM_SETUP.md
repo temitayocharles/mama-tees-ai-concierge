@@ -39,6 +39,16 @@ Retell Agent: agent_18dafa1d3bf6038320ad0be4a7
 Retell Voice: custom_voice_2078deacf9cdf5096ba2124a06
 ```
 
+Current Retell phone number routing:
+
+```text
+Phone number: +1 (431) 500-6652
+Inbound agent: agent_18dafa1d3bf6038320ad0be4a7
+Outbound agent: agent_18dafa1d3bf6038320ad0be4a7 version 0
+Published agent version: 0
+Current draft agent version: 1
+```
+
 Current production backend:
 
 ```text
@@ -64,7 +74,7 @@ X-Webhook-Secret: YOUR_WEBHOOK_SECRET
 ```
 
 7. Use the schema from `prompts/voice-agent-tool-schema.md`.
-8. Assign a test phone number.
+8. Confirm the assigned Retell phone number is `+1 (431) 500-6652`.
 9. Place test calls for order, reservation, delivery rejection, and fallback callback.
 10. Confirm new rows appear in Google Sheets.
 
