@@ -1,93 +1,109 @@
 # Repository Finalization
 
-## Issue
+## Purpose
 
-Tracks GitHub issue #10: Finalize GitHub repository settings, milestones, and deterministic lockfile.
+This document records repository settings and finalization checks for the Mama Tee's Kitchen AI Voice Concierge codebase.
 
-## Current repository state
+## Repository posture
 
-| Item | Status | Evidence |
-|---|---|---|
-| Default branch | `main` | GitHub branch settings |
-| Repository homepage | `https://mama-tees-ai-concierge.vercel.app` | GitHub repository metadata |
-| Repository visibility | Public | Deliberate open-source-ready decision; no secrets are committed |
-| Issues enabled | Yes | GitHub repository metadata |
-| Projects enabled | Yes | GitHub repository metadata |
-| Secret scanning | Enabled | GitHub security settings |
-| Secret scanning push protection | Enabled | GitHub security settings |
-| `package-lock.json` | Present on `main` | Repository root |
-| CI install command | `npm ci` | `.github/workflows/ci.yml` |
-| Core demo persistence | Google Sheets only | Issue #3 evidence |
+The repository is intended to be public and professionally reviewable. Public documentation should present the project as a client delivery by InfraForge and should avoid internal training, brainstorming, or experimental-tooling language.
 
-## Visibility decision
+## Repository metadata
 
-The original project-management note recommended a private repository before final submission. The repository is currently public.
+Recommended repository description:
 
-This is a deliberate decision for open-source readiness, provided the following controls remain true:
-
-- No `.env` file is committed.
-- No Google private key is committed.
-- No webhook secret is committed.
-- No Retell, ElevenLabs, Vercel, Google, or Composio credential is committed.
-- Screenshots and Loom recordings redact secrets and billing/account-security pages.
-- Runtime secrets remain only in managed platforms such as Vercel and Retell.
-
-If the course provider explicitly requires private submission, change visibility to private before submitting and return it to public after grading.
-
-## Deterministic install policy
-
-CI must use the lockfile-backed command:
-
-```bash
-npm ci
+```text
+AI-powered phone concierge for Mama Tee's Kitchen using Retell AI, ElevenLabs, Vercel, and Google Sheets.
 ```
 
-Do not use `npm install` in CI after `package-lock.json` exists on `main`.
+Recommended topics:
 
-Local validation commands:
+```text
+ai-voice-agent
+elevenlabs
+google-sheets
+nodejs
+retell-ai
+typescript
+vercel
+workflow-automation
+```
+
+## Merge settings
+
+Recommended merge settings:
+
+```text
+Squash merge: enabled
+Merge commits: disabled
+Rebase merge: enabled
+Delete branch on merge: enabled
+```
+
+## Required files
+
+The repository should include:
+
+```text
+package.json
+package-lock.json
+.github/workflows/ci.yml
+.env.example
+README.md
+PROJECT_HANDOFF.md
+docs/CLIENT_REQUIREMENTS.md
+docs/ARCHITECTURE.md
+docs/DEPLOYMENT.md
+docs/GOOGLE_SHEETS_SETUP.md
+docs/VOICE_AGENT_PLATFORM_SETUP.md
+docs/N8N_WORKFLOW_SETUP.md
+docs/QA_ACCEPTANCE_MATRIX.md
+docs/TEST_PLAN.md
+docs/DELIVERY_CHECKLIST.md
+```
+
+## CI baseline
+
+CI should run:
 
 ```bash
 npm ci
 npm run build
 npm test
-npm audit --omit=dev
 ```
 
-## Recommended repository settings
+## Security checks
 
-| Setting | Recommended value | Rationale |
-|---|---|---|
-| Allow squash merge | Enabled | Keeps history clean for issue-based workflow |
-| Allow merge commits | Disabled | Avoids noisy merge commits |
-| Allow rebase merge | Enabled | Allows linear history if needed |
-| Automatically delete head branches | Enabled | Reduces stale branches after merge |
-| Branch protection for `main` | Enabled if supported | Prevents accidental red-main merges |
-| Required status checks | `build-test`, `package-lock` if branch protection supports them | Ensures deterministic build/test gate |
+Before final handoff:
 
-## Current issue and milestone mapping
+- confirm no `.env` file is committed,
+- confirm no credentials are present in docs,
+- confirm no Google private key exists in the repository,
+- confirm secret scanning is enabled,
+- confirm push protection is enabled where available,
+- confirm screenshots and recordings do not expose credentials,
+- rotate any exposed credential immediately.
 
-The canonical issue/milestone mapping remains in:
+## Documentation standards
 
-```text
-docs/GITHUB_PROJECT_MANAGEMENT.md
-```
+Public-facing documentation should:
 
-Core demo priority remains:
+- describe the client problem and delivered solution,
+- document the architecture honestly,
+- keep n8n optional unless fully validated,
+- keep the backend as the validation authority,
+- avoid internal training narratives,
+- avoid brainstorming history,
+- avoid unnecessary references to tools not used in the delivered path.
 
-1. #2 Backend deployment.
-2. #3 Google Sheets logging.
-3. #4 Retell AI and ElevenLabs agent.
-4. #7 QA acceptance matrix.
+## Final review
 
-Post-demo enhancements remain optional and must not be presented as required for the core demo.
+Before presenting the repository:
 
-## Closure criteria for issue #10
-
-Issue #10 can close when:
-
-- `package-lock.json` exists on `main`.
-- CI uses `npm ci`.
-- Repository metadata is set for the project.
-- Milestones exist and issue mapping is documented.
-- Repository visibility is private or a deliberate public/open-source-ready decision is documented.
-- Main branch remains green after finalization changes.
+1. Confirm open PRs are either merged or intentionally left open.
+2. Confirm `main` is green.
+3. Confirm backend readiness is healthy.
+4. Confirm Google Sheets logging works.
+5. Confirm Retell live call validation evidence exists.
+6. Confirm optional n8n evidence exists only if n8n is being shown.
+7. Confirm all public docs align with the client-delivery narrative.

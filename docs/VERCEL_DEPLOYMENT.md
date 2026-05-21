@@ -1,83 +1,56 @@
-# Vercel Deployment Guide
+# Vercel Deployment
 
-## Goal
-
-Deploy the Mama Tee's Kitchen Node.js webhook API as a Vercel Express Function.
-
-This deployment target hosts only the backend webhook API. It does not add a database. Google Sheets remains the call-log persistence layer for the core demo.
-
-## Architecture
+## Production URL
 
 ```text
-Retell AI phone agent
-  -> Vercel HTTPS endpoint
-  -> Node.js Express webhook
-  -> Google Sheets call log
+https://mama-tees-ai-concierge.vercel.app
 ```
 
-## Repository files
+## Purpose
 
-Vercel-specific files:
+Vercel hosts the Node.js backend that receives authenticated call-log requests from the voice layer or optional automation workflow.
 
-- `api/index.ts`: exports the existing Express app for Vercel Functions.
-- `vercel.json`: configures install, build, and route rewrites for the API.
+The backend validates payloads, enforces business rules, and writes accepted records to Google Sheets.
 
-Existing backend files remain the source of business logic:
-
-- `src/app.ts`
-- `src/routes/health.ts`
-- `src/routes/callLogs.ts`
-- `src/domain/businessRules.ts`
-- `src/services/googleSheets.ts`
-
-## Vercel project settings
-
-Use these project settings:
+## Endpoints
 
 ```text
-Framework: Express
-Install command: npm ci --include=dev
-Build command: npm run build
-Root directory: repository root
-Production branch: main
+GET  /healthz
+GET  /readiness
+POST /api/call-logs
 ```
 
-The install command intentionally includes dev dependencies because the TypeScript compiler is a dev dependency required during the build step. Runtime dependencies remain controlled by `package-lock.json`.
+## Required environment categories
 
-## Required environment variables
+Configure environment values in Vercel, not in source control.
 
-Configure these values in Vercel Project Settings. Do not commit actual credentials.
+Required categories:
 
-```text
-WEBHOOK_SECRET=<set in Vercel only>
-LOG_DESTINATION=google_sheets
-GOOGLE_SHEETS_SPREADSHEET_ID=1TYO9pj59qYfBeExiKLVYuvD9QB1jSFAhFb5rGBv4mB8
-GOOGLE_SHEETS_TAB_NAME=Call Logs
-GOOGLE_SERVICE_ACCOUNT_EMAIL=<set in Vercel only>
-GOOGLE_PRIVATE_KEY=<set in Vercel only, escaped newlines>
-BUSINESS_TIMEZONE=Africa/Lagos
-```
+- webhook authentication value,
+- log destination,
+- Google Sheets spreadsheet ID,
+- Google Sheets tab name,
+- Google Workload Identity Federation configuration,
+- service account impersonation target,
+- business timezone.
 
-`WEBHOOK_SECRET` is required for call-log writes. If it is missing, `/healthz` remains available, `/readiness` returns `503 not_ready`, and `POST /api/call-logs` returns `503` without writing records.
-
-`PORT` is not required on Vercel because Vercel manages the function runtime. Do not set `NODE_ENV=production` in a way that prevents dev dependencies from being installed during the build step.
+Do not use Google private keys for production.
 
 ## Validation
 
-After deployment, validate the public URL:
+Health check:
 
 ```bash
-curl -sS https://<vercel-url>/healthz
-curl -i https://<vercel-url>/readiness
+curl https://mama-tees-ai-concierge.vercel.app/healthz
 ```
 
-Expected `/healthz` response:
+Readiness check:
 
-```json
-{"status":"ok"}
+```bash
+curl https://mama-tees-ai-concierge.vercel.app/readiness
 ```
 
-Expected `/readiness` response after all required environment variables are configured:
+Expected readiness:
 
 ```json
 {
@@ -85,37 +58,27 @@ Expected `/readiness` response after all required environment variables are conf
   "webhook_auth_configured": true,
   "log_destination": "google_sheets",
   "google_sheets_configured": true,
+  "google_sheets_auth_mode": "workload_identity",
   "business_timezone": "Africa/Lagos"
 }
 ```
 
-Expected `/readiness` response before `WEBHOOK_SECRET` or Google Sheets credentials are configured: HTTP `503` with `status` set to `not_ready`.
-
-Validate webhook protection after `WEBHOOK_SECRET` is configured:
-
-```bash
-curl -i -X POST https://<vercel-url>/api/call-logs \
-  -H 'Content-Type: application/json' \
-  --data-binary @examples/order-log.json
-```
-
-Expected result without `X-Webhook-Secret`: HTTP `401 Unauthorized`.
-
-Validate successful writes only after the Vercel environment variables are configured with the Google service account and webhook secret.
-
-## Security requirements
-
-- Do not commit `.env`.
-- Do not commit Google service account JSON.
-- Do not expose `WEBHOOK_SECRET`, `GOOGLE_PRIVATE_KEY`, or API credentials in GitHub, screenshots, issue comments, PRs, or Loom recordings.
-- Keep Google Sheets service account access limited to the required spreadsheet.
-- Rotate any credential that is accidentally exposed.
-
 ## Rollback
 
-If Vercel deployment fails or the voice platform cannot reach it:
+If a deployment fails:
 
-1. Promote the previous known-good deployment or pause use of the Vercel endpoint.
-2. Keep the repository branch open for review until checks are green.
-3. Continue using the existing `render.yaml` path as an alternative deployment target.
-4. Do not change the Google Sheet or business rules while rolling back deployment hosting.
+1. Stop additional changes.
+2. Confirm the failing endpoint and response code.
+3. Review deployment logs without exposing environment values.
+4. Roll back to the previous healthy Vercel deployment.
+5. Re-run readiness checks.
+6. Re-run a safe call-log validation.
+7. Confirm a Google Sheet row is written.
+8. Document root cause and follow-up action.
+
+## Security
+
+- Do not expose environment values in screenshots or recordings.
+- Do not paste environment values into GitHub issues or pull requests.
+- Rotate any exposed value.
+- Keep Google authentication on Workload Identity Federation.
