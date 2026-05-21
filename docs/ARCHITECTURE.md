@@ -1,159 +1,128 @@
 # Architecture
 
-## Selected architecture
+## Objective
+
+Mama Tee's Kitchen AI Voice Concierge is a phone-first automation system for restaurant call handling, structured request capture, and visible staff review.
+
+The architecture intentionally avoids unnecessary infrastructure. There is no application database. Google Sheets is the operations-facing call-log persistence layer.
+
+## Primary production path
 
 ```text
 Customer phone call
   -> Retell AI phone agent
-  -> ElevenLabs custom voice
-  -> Node.js backend API
-  -> Google Sheets visible log
+  -> ElevenLabs custom voice in Retell
+  -> Vercel Node.js backend webhook
+  -> Google Sheets visible call log
 ```
 
-Optional fallback or extension:
+## Optional automation fallback path
 
 ```text
-Customer phone call
-  -> Voice platform
+Voice platform or HTTP caller
   -> n8n webhook
-  -> Google Sheets visible log
+  -> Vercel backend /api/call-logs
+  -> Google Sheets visible call log
 ```
 
-## Why this architecture
+The fallback workflow must forward to the backend instead of writing directly to Google Sheets. This keeps authentication, payload validation, business rules, confirmation summaries, sanitized errors, and spreadsheet schema ownership centralized in the backend.
 
-The capstone brief requires a working voice assistant, accurate knowledge-base behavior, structured data capture, automation, and a visible log. It does not require any specific vendor.
+## Backend responsibilities
 
-Retell AI plus ElevenLabs was selected because:
+The Vercel backend owns:
 
-- It avoids overusing Vapi if many submissions use it.
-- It keeps the project differentiated through the custom ElevenLabs voice.
-- It still satisfies the core requirement: live voice agent plus structured logging.
-- It lets the Node.js backend enforce business rules before records hit Google Sheets.
+- webhook authentication with `X-Webhook-Secret`,
+- request payload validation,
+- request normalization,
+- delivery rules,
+- reservation rules,
+- confirmation summary generation,
+- sanitized error responses,
+- Google Sheets append logic,
+- readiness and health endpoints.
 
-## Components
+## Voice-agent responsibilities
 
-| Component | Role |
-|---|---|
-| Retell AI | Phone-call voice agent layer. |
-| ElevenLabs | Custom voice provider. |
-| Node.js backend | Secured webhook, payload validation, business rules, logging. |
-| Google Sheets | Visible owner-facing log. |
-| n8n | Optional automation fallback or extension. |
-| Composio | Optional connector layer for future enhancements. |
+The voice agent owns:
 
-## Backend API
+- automated-assistant disclosure,
+- caller conversation flow,
+- collection of confirmed request details,
+- concise responses suitable for phone calls,
+- use of the backend logging tool only after confirmation,
+- fallback to callback logging when a request is outside supported scope.
 
-### Health
+The voice agent must not invent menu items, prices, discounts, policies, or availability.
+
+## Google Sheets responsibility
+
+Google Sheets is the visible business log.
 
 ```text
-GET /healthz
+Title: Mama Tee's Kitchen Call Logs
+Spreadsheet ID: 1TYO9pj59qYfBeExiKLVYuvD9QB1jSFAhFb5rGBv4mB8
+Tab: Call Logs
 ```
 
-Expected:
+Google Sheets is not the business-rule engine. The backend validates before append.
 
-```json
-{"status":"ok"}
-```
-
-### Readiness
+## Production authentication model
 
 ```text
-GET /readiness
+Vercel OIDC
+  -> Google Workload Identity Federation
+  -> service account impersonation
+  -> Google Sheets append
 ```
 
-Expected:
+Do not use Google private keys for production.
+
+## Backend endpoints
+
+```text
+GET  /healthz
+GET  /readiness
+POST /api/call-logs
+```
+
+Expected readiness response:
 
 ```json
 {
   "status": "ready",
+  "webhook_auth_configured": true,
   "log_destination": "google_sheets",
+  "google_sheets_configured": true,
+  "google_sheets_auth_mode": "workload_identity",
   "business_timezone": "Africa/Lagos"
 }
 ```
 
-### Call logging
+## Business-rule boundary
+
+The backend and prompt both reflect the same restaurant rules, but the backend is the enforcement boundary for persisted records.
+
+Rules that must remain stable:
+
+- delivery Monday to Saturday only,
+- delivery hours 10:00am to 7:00pm,
+- no Sunday delivery,
+- minimum delivery order ₦3,000,
+- payment before dispatch,
+- reservations only for groups of 5 or more,
+- reservations require at least 24 hours notice,
+- reservation deposit ₦5,000,
+- deposit applies to the bill,
+- supported delivery-fee bands must not be changed without client approval.
+
+## Current external service state
 
 ```text
-POST /api/call-logs
+Production backend: https://mama-tees-ai-concierge.vercel.app
+Retell phone number: +1 (431) 500-6652
+Retell agent: agent_18dafa1d3bf6038320ad0be4a7
+Retell LLM: llm_5bf4bf80d471d52a9de7f0aec4a8
+Retell voice: custom_voice_2078deacf9cdf5096ba2124a06
 ```
 
-Required header:
-
-```text
-X-Webhook-Secret: <configured secret>
-```
-
-Purpose:
-
-- Log confirmed orders.
-- Log confirmed reservations.
-- Log callback requests.
-- Log complaints, catering requests, or general inquiries.
-
-## Data flow
-
-```text
-1. Customer calls the Retell phone number.
-2. Retell agent answers using the approved system prompt.
-3. Agent answers FAQ questions from the knowledge base.
-4. If customer wants an order/reservation/callback, agent collects required details.
-5. Agent repeats the summary and asks for confirmation.
-6. After confirmation, agent calls POST /api/call-logs.
-7. Backend validates request body and business rules.
-8. Backend appends row to Google Sheets.
-9. Owner reviews the row.
-```
-
-## Business-rule enforcement
-
-Implemented in:
-
-```text
-src/domain/businessRules.ts
-```
-
-Rules enforced:
-
-- Delivery only applies to delivery orders.
-- No Sunday delivery.
-- Delivery hours are 10:00am to 7:00pm.
-- Minimum delivery order is ₦3,000.
-- Delivery area fee lookup.
-- Reservations require at least 5 guests.
-- Reservations require at least 24 hours notice.
-
-## Source of truth
-
-The capstone brief facts are documented in:
-
-```text
-docs/CAPSTONE_BRIEF_REQUIREMENTS.md
-```
-
-Do not update prompts, backend rules, or tests without checking that document first.
-
-## Security design
-
-- Webhook endpoint requires `X-Webhook-Secret`.
-- Secrets are configured through environment variables.
-- Google Sheets access should be limited to the target spreadsheet.
-- `.env` is ignored by Git.
-- Logs redact sensitive headers.
-- The assistant must disclose it is automated.
-
-## Reliability considerations
-
-- Backend should be deployed to an always-on host before Loom recording.
-- Google Sheets is acceptable for capstone logging but not ideal for high-volume production use.
-- Local JSONL logging is for development only.
-- n8n should be treated as fallback or extension unless it is tested end to end.
-
-## Future production improvements
-
-- Add rate limiting.
-- Add request signing or HMAC validation.
-- Add structured audit logs.
-- Add dead-letter queue for failed Sheet writes.
-- Add monitoring and alerting.
-- Add authenticated admin dashboard.
-- Add data retention policy.
+Live Retell call validation and final n8n fallback validation remain separate evidence items.
